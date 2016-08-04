@@ -2,98 +2,119 @@ package server
 
 import (
 	"container/list"
-	"github.com/rgafiyatullin/imc/protocol/resp/types/request"
+	"errors"
 	"fmt"
+	"github.com/rgafiyatullin/imc/protocol/resp/constants"
+	"github.com/rgafiyatullin/imc/protocol/resp/types"
+	"net"
+	"net/textproto"
+	"strconv"
 )
 
 type Context interface {
-	AddChunk(chunk []byte)
-
-	HasRequest() bool
-	FetchRequest() request.Request
+	NextCommand() (*types.BasicArr, error)
+	Write(data types.BasicType)
 }
 type context struct {
-	trailingCR  bool
-	rawRequests *list.List // list.List<[]byte>
-	chunks      *list.List // list.List<[]byte>
+	sock net.Conn
+	text *textproto.Conn
 }
 
-func New() Context {
+func New(sock net.Conn) Context {
 	ctx := new(context)
-	ctx.trailingCR = false
-	ctx.chunks = list.New()
-	ctx.rawRequests = list.New()
+	ctx.sock = sock
+	ctx.text = textproto.NewConn(sock)
 	return ctx
 }
 
-func (this *context) AddChunk(chunk []byte) {
-	if len(chunk) == 0 {
-		fmt.Println("!!! zero-lengthed chunk")
-		return
+func (this *context) NextCommand() (*types.BasicArr, error) {
+	line, err := this.text.ReadLine()
+	if err != nil {
+		return nil, err
 	}
-
-	if this.trailingCR && chunk[0] == '\n' {
-		fmt.Println("!!! trailingCR and starts with LF")
-		lastChunkElt := this.chunks.Back()
-		withLF := lastChunkElt.Value.([]byte)
-		withNoLF := withLF[:len(withLF)-1]
-		lastChunkElt.Value = withNoLF // is this okay?
-
-		this.finalizeRawRequest()
-
-		nextChunk := chunk[1:]
-		this.AddChunk(nextChunk)
-	} else {
-		fmt.Println("!!! general case")
-		head, tail, ok := splitWithCRLF(chunk)
-		if ok {
-			this.chunks.PushBack(head)
-			this.finalizeRawRequest()
-			this.AddChunk(tail)
-		} else {
-			this.chunks.PushBack(chunk)
-			this.trailingCR = chunk[len(chunk)-1] == '\r'
+	if len(line) == 0 {
+		return this.NextCommand()
+	}
+	switch line[0] {
+	case constants.PrefixArray:
+		cnt, err := strconv.ParseInt(line[1:], 10, 64)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("expected array size, got '%v'", line[1:]))
 		}
-	}
-}
-
-func (this *context) HasRequest() bool {
-	return this.rawRequests.Len() > 0
-}
-
-func (this *context) FetchRequest() request.Request {
-	if !this.HasRequest() {
-		return nil
-	}
-
-	elt := this.rawRequests.Front()
-	this.rawRequests.Remove(elt)
-	return request.FromBytes(elt.Value.([]byte))
-}
-
-func (this *context) finalizeRawRequest() {
-	rawReqSize := 0
-	for element := this.chunks.Front(); element != nil; element = element.Next() {
-		rawReqSize += len(element.Value.([]byte))
-	}
-	copyToPos := 0
-	rawReq := make([]byte, rawReqSize)
-	for element := this.chunks.Front(); element != nil; element = element.Next() {
-		chunk := element.Value.([]byte)
-		copyTo := rawReq[copyToPos : copyToPos+len(chunk)]
-		copy(copyTo, chunk)
-	}
-	this.rawRequests.PushBack(rawReq)
-	this.chunks = list.New()
-
-	fmt.Printf("!!! finalizeRawRequest %v\n", rawReq)
-}
-
-func splitWithCRLF(chunk []byte) ([]byte, []byte, bool) {
-	for i := 0; i < len(chunk)-1; i++ {
-		if chunk[i] == '\r' && chunk[i+1] == '\n' {
-			return chunk[:i], chunk[i+2:], true
+		elements, err := this.processArray(cnt)
+		if err != nil {
+			return nil, err
 		}
+		return elements, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("expected array (*), got '%v'", line[0]))
 	}
-	return nil, nil, false
+}
+
+func (this *context) Write(data types.BasicType) {
+	data.Write(this.text)
+}
+
+func (this *context) processArray(count64 int64) (*types.BasicArr, error) {
+	count := int(count64)
+	elements := list.New()
+	for i := 0; i < count; i++ {
+		element, err := this.processCommandElement()
+		if err != nil {
+			return nil, err
+		}
+
+		elements.PushBack(element)
+	}
+	return types.NewArray(elements), nil
+}
+
+func (this *context) processCommandElement() (types.BasicType, error) {
+	line, err := this.text.ReadLine()
+	if err != nil {
+		return nil, err
+	}
+	if len(line) == 0 {
+		return this.processCommandElement()
+	}
+
+	switch line[0] {
+	case constants.PrefixInteger:
+		value, err := strconv.ParseInt(line[1:], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		return types.NewInt(value), nil
+
+	case constants.PrefixError:
+		return types.NewErr(line[1:]), nil
+
+	case constants.PrefixStr:
+		return types.NewStr(line[1:]), nil
+
+	case constants.PrefixArray:
+		count, err := strconv.ParseInt(line[1:], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		return this.processArray(count)
+
+	case constants.PrefixBulkStr:
+		bytesCount64, err := strconv.ParseInt(line[1:], 10, 64)
+		bytesCount := int(bytesCount64)
+		if err != nil {
+			return nil, err
+		}
+		bytesPeeked, err := this.text.R.Peek(bytesCount)
+		if err != nil {
+			return nil, err
+		}
+		_, err = this.text.R.Discard(bytesCount)
+		if err != nil {
+			return nil, err
+		}
+		return types.NewBulkStr(bytesPeeked), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Unexpected type-prefix: '%v'", line[0]))
+	}
 }

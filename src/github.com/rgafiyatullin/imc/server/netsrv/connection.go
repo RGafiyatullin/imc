@@ -1,11 +1,10 @@
 package netsrv
 
 import (
-	_ "github.com/rgafiyatullin/imc/protocol/resp/constatns"
-	protoReader "github.com/rgafiyatullin/imc/protocol/resp/server"
-	"github.com/rgafiyatullin/imc/protocol/resp/types/request"
+	"github.com/rgafiyatullin/imc/protocol/resp/server"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"net"
+	"github.com/rgafiyatullin/imc/protocol/resp/types"
 )
 
 const ReadBufSize int = 10
@@ -23,7 +22,7 @@ type connection struct {
 type connectionState struct {
 	actorCtx   actor.Ctx
 	readBuf    []byte
-	readerCtx  protoReader.Context
+	protocol   server.Context
 	sock       net.Conn
 	cId        int
 	aId        int
@@ -39,36 +38,31 @@ func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn
 	this.cId = cId
 	this.aId = aId
 	this.closedChan = closedChan
-	this.readerCtx = protoReader.New()
+	this.protocol = server.New(sock)
 }
 
 func (this *connectionState) loop() {
 	defer this.onClosed()
 
 	for {
-		bytesRead, err := this.sock.Read(this.readBuf)
+		cmd, err := this.protocol.NextCommand()
 		if err != nil {
-			this.onReadError(err)
-			return
-		} else {
-			chunk := make([]byte, bytesRead)
-			copy(chunk, this.readBuf[:bytesRead])
-
-			this.actorCtx.Log().Debug("adding chunk: %v", chunk)
-
-			this.readerCtx.AddChunk(chunk)
-			for this.readerCtx.HasRequest() {
-				this.actorCtx.Log().Debug("has request")
-				req := this.readerCtx.FetchRequest()
-				this.processRequest(req)
-			}
+			this.actorCtx.Log().Warn("error reading cmd: %v", err)
+			break
 		}
+		//this.actorCtx.Log().Debug("command: %+v", cmd.ToString())
+		this.processRequest(cmd)
 	}
 }
 
-func (this *connectionState) processRequest(req request.Request) {
-	this.actorCtx.Log().Debug("processRequest [req: %+v]", req)
+func (this *connectionState) processRequest(req *types.BasicArr) {
+	this.actorCtx.Log().Debug("processRequest [req: %+v]", req.ToString())
+	resp := types.NewErr("Not implemented. Coming soon :)")
+	this.actorCtx.Log().Debug("About to write response...")
+	this.protocol.Write(resp)
 }
+
+
 
 func (this *connectionState) onClosed() {
 	this.actorCtx.Log().Debug("closed")
