@@ -30,7 +30,7 @@ func (this *impl) NewChild(name string) Ctx {
 
 func NewCtx() Ctx {
 	ctx := new(impl)
-	ctx.log_ = logging.NewStdoutCtx()
+	ctx.log_ = logging.New()
 	ctx.path_ = ""
 	return ctx
 }

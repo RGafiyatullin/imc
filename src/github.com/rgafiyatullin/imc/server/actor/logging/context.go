@@ -1,42 +1,62 @@
 package logging
 
-import "fmt"
+import "time"
 
 type Ctx interface {
 	CloneWithName(name string) Ctx
 	Debug(fmtStr string, args ...interface{})
 	Info(fmtStr string, args ...interface{})
-	Warn(fmtStr string, args ...interface{})
+	Warning(fmtStr string, args ...interface{})
 	Error(fmtStr string, args ...interface{})
 }
 
-type StdoutCtx struct {
-	name_ string
+type ctx struct {
+	handler_ Handler
+	name_    string
 }
 
-func (this *StdoutCtx) CloneWithName(name string) Ctx {
-	clone := new(StdoutCtx)
+func (this *ctx) CloneWithName(name string) Ctx {
+	clone := new(ctx)
+	clone.handler_ = this.handler_
 	clone.name_ = name
 	return clone
 }
 
-func (this *StdoutCtx) Debug(fmtStr string, args ...interface{}) {
-	fmt.Printf("[%s] Log: [debug] fmt: %v; args: %v\n", this.name_, fmtStr, args)
+func (this *ctx) message(lvl int, fmtStr string, args []interface{}) {
+	now := time.Now()
+	report := new(LogReport)
+	report.level = lvl
+	report.at = now
+	report.fmt = fmtStr
+	report.args = args
+	if this.name_ == "" {
+		report.entity = "/"
+	} else {
+		report.entity = this.name_
+	}
+
+	this.handler_.Report(report)
 }
 
-func (this *StdoutCtx) Info(fmtStr string, args ...interface{}) {
-	fmt.Printf("[%s] Log: [info] fmt: %v; args: %v\n", this.name_, fmtStr, args)
+func (this *ctx) Debug(fmtStr string, args ...interface{}) {
+	this.message(lvlDebug, fmtStr, args)
 }
 
-func (this *StdoutCtx) Warn(fmtStr string, args ...interface{}) {
-	fmt.Printf("[%s] Log: [warn] fmt: %v; args: %v\n", this.name_, fmtStr, args)
+func (this *ctx) Info(fmtStr string, args ...interface{}) {
+	this.message(lvlInfo, fmtStr, args)
 }
 
-func (this *StdoutCtx) Error(fmtStr string, args ...interface{}) {
-	fmt.Printf("[%s] Log: [error] fmt: %v; args: %v\n", this.name_, fmtStr, args)
+func (this *ctx) Warning(fmtStr string, args ...interface{}) {
+	this.message(lvlWarning, fmtStr, args)
 }
 
-func NewStdoutCtx() Ctx {
-	stdoutCtx := new(StdoutCtx)
+func (this *ctx) Error(fmtStr string, args ...interface{}) {
+	this.message(lvlError, fmtStr, args)
+}
+
+func New() Ctx {
+	handler := NewHandler()
+	stdoutCtx := new(ctx)
+	stdoutCtx.handler_ = handler
 	return stdoutCtx
 }

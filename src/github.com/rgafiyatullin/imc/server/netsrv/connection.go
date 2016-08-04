@@ -2,9 +2,9 @@ package netsrv
 
 import (
 	"github.com/rgafiyatullin/imc/protocol/resp/server"
+	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"net"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
 )
 
 const ReadBufSize int = 10
@@ -47,22 +47,18 @@ func (this *connectionState) loop() {
 	for {
 		cmd, err := this.protocol.NextCommand()
 		if err != nil {
-			this.actorCtx.Log().Warn("error reading cmd: %v", err)
+			this.actorCtx.Log().Warning("error reading cmd: %v", err)
 			break
 		}
-		//this.actorCtx.Log().Debug("command: %+v", cmd.ToString())
 		this.processRequest(cmd)
 	}
 }
 
 func (this *connectionState) processRequest(req *types.BasicArr) {
-	this.actorCtx.Log().Debug("processRequest [req: %+v]", req.ToString())
 	resp := types.NewErr("Not implemented. Coming soon :)")
-	this.actorCtx.Log().Debug("About to write response...")
+	this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
 	this.protocol.Write(resp)
 }
-
-
 
 func (this *connectionState) onClosed() {
 	this.actorCtx.Log().Debug("closed")
@@ -75,7 +71,7 @@ func (this *connectionState) onClosed() {
 }
 
 func (this *connectionState) onReadError(err error) {
-	this.actorCtx.Log().Warn("read error: %+v", err)
+	this.actorCtx.Log().Warning("read error: %+v", err)
 }
 
 func (this *connection) acceptorId() int {
