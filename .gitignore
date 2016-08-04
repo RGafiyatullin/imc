@@ -32,3 +32,4 @@ out/
 pkg/
 Would skip repository src/github.com/rgafiyatullin/imc
 src/github.com/rgafiyatullin/golangfirststeps
+.DS_Store

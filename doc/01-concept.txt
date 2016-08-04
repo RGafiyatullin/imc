@@ -1,0 +1,5 @@
+
+All the data within the daemon is stored in the collection.
+The collection is a hash-table.
+The daemon can be interacted using Redis-protocol.
+
