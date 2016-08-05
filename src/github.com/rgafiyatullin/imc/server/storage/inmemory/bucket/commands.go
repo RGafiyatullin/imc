@@ -1,9 +1,6 @@
 package bucket
 
-import (
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
-	"time"
-)
+import "github.com/rgafiyatullin/imc/protocol/resp/types"
 
 const cmdSet = 1
 const cmdGet = 2
@@ -14,10 +11,30 @@ type Cmd interface {
 	CmdId() int
 }
 
+func NewCmdGet(key string) Cmd {
+	cmd := new(CmdGet)
+	cmd.key = key
+	return cmd
+}
+
+func NewCmdSet(key string, value types.BasicType, expiry uint64) Cmd {
+	cmd := new(CmdSet)
+	cmd.key = key
+	cmd.value = value
+	cmd.expiry = expiry
+	return cmd
+}
+
+func NewCmdDel(key string) Cmd {
+	cmd := new(CmdDel)
+	cmd.key = key
+	return cmd
+}
+
 type CmdSet struct {
-	key   string
-	value types.BasicType
-	ttl   time.Duration
+	key    string
+	value  types.BasicType
+	expiry uint64
 }
 
 func (this *CmdSet) CmdId() int {

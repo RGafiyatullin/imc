@@ -23,6 +23,7 @@ func (this *bucket) RunCmd(cmd Cmd) types.BasicType {
 	req := new(cmdReq)
 	req.cmd = cmd
 	req.replyTo = ch
+	this.chans.cmd <- req
 	return <-ch
 }
 

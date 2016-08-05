@@ -52,10 +52,10 @@ func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn
 
 func (this *connectionState) initCommands() {
 	this.handlers = make(map[string]commands.CommandHandler)
-	commands.NewPingHandler(this.actorCtx).Register(this.handlers)
-	commands.NewGetHandler(this.actorCtx, this.ringMgr).Register(this.handlers)
-	commands.NewSetHandler(this.actorCtx, this.ringMgr).Register(this.handlers)
-	commands.NewDelHandler(this.actorCtx, this.ringMgr).Register(this.handlers)
+	commands.NewPingHandler(this.actorCtx.NewChild("#PING")).Register(this.handlers)
+	commands.NewGetHandler(this.actorCtx.NewChild("#GET"), this.ringMgr).Register(this.handlers)
+	commands.NewSetHandler(this.actorCtx.NewChild("#SET"), this.ringMgr).Register(this.handlers)
+	commands.NewDelHandler(this.actorCtx.NewChild("#DEL"), this.ringMgr).Register(this.handlers)
 }
 
 func (this *connectionState) loop() {

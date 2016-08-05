@@ -21,3 +21,6 @@ func (this *BasicInt) ToString() string {
 func (this *BasicInt) Write(to *textproto.Conn) {
 	to.Cmd(":%d", this.i)
 }
+func (this *BasicInt) Add(other *BasicInt) *BasicInt {
+	return NewInt(this.i + other.i)
+}

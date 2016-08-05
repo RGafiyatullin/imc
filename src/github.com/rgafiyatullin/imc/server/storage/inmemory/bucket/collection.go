@@ -15,10 +15,12 @@ import (
 
 type KV interface {
 	// Returns nillable KVEntry if there is one associated with the given key
-	Get(key string) KVEntry
+	Get(key string) (KVEntry, bool)
 
 	// Creates and stores a new KVEntry associated with the given key
 	Set(key string, value types.BasicType, validThru uint64)
+
+	Del(key string)
 }
 
 type KVEntry interface {
@@ -65,13 +67,18 @@ func NewKV() KV {
 	return kv
 }
 
-func (this *kv) Get(k string) KVEntry {
-	return this.storage[k]
+func (this *kv) Get(k string) (KVEntry, bool) {
+	kve, found := this.storage[k]
+	return kve, found
 }
 
 func (this *kv) Set(key string, value types.BasicType, validThru uint64) {
 	entry := NewKVEntry(value, validThru)
 	this.storage[key] = entry
+}
+
+func (this *kv) Del(key string) {
+	delete(this.storage, key)
 }
 
 // TTL implementation

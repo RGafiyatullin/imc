@@ -3,10 +3,12 @@ package ringmgr
 import (
 	"container/list"
 	"fmt"
+	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
+	"hash/crc32"
 )
 
 type RingMgr interface {
@@ -29,7 +31,7 @@ func (this *ringmgr) Join() join.Awaitable {
 }
 
 func (this *ringmgr) QueryBuckets() []bucket.Bucket {
-	ch := make(chan []bucket.Bucket)
+	ch := make(chan []bucket.Bucket, 1)
 	this.chans.queryBuckets <- ch
 	return <-ch
 }
@@ -37,12 +39,17 @@ func (this *ringmgr) QueryBuckets() []bucket.Bucket {
 func StartRingMgr(ctx actor.Ctx, config config.Config) RingMgr {
 	chans := new(inChans)
 	chans.join = join.NewServerChan()
+	chans.queryBuckets = make(chan chan<- []bucket.Bucket, 32)
 	m := new(ringmgr)
 	m.chans = chans
 
 	go ringMgrEnterLoop(ctx, config, chans)
 
 	return m
+}
+
+func CalcKeyHash(key *types.BasicBulkStr) uint32 {
+	return crc32.ChecksumIEEE(key.Bytes())
 }
 
 type state struct {
@@ -80,6 +87,9 @@ func (this *state) loop() {
 		select {
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)
+		case qb := <-this.chans.queryBuckets:
+			this.ctx.Log().Debug("buckets quieried")
+			qb <- this.buckets
 		}
 	}
 }
