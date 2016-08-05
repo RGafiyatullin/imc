@@ -99,7 +99,7 @@ func (this *connectionState) processRequest(req *types.BasicArr) {
 		}
 	}
 
-	this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
+	//this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
 
 	this.protocol.Write(resp)
 }

@@ -88,7 +88,6 @@ func (this *state) loop() {
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)
 		case qb := <-this.chans.queryBuckets:
-			this.ctx.Log().Debug("buckets quieried")
 			qb <- this.buckets
 		}
 	}

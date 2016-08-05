@@ -72,7 +72,7 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (types.BasicType, error) {
 	this.ttl.SetTTL(cmd.key, uint64(0))
 
 	affectedRecords := int64(0)
-	if (existed && kve.validThru() >= this.tickIdx) {
+	if existed && kve.validThru() >= this.tickIdx {
 		affectedRecords = 1
 	}
 

@@ -5,6 +5,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
+	"time"
 )
 
 type GetHandler struct {
@@ -12,7 +13,15 @@ type GetHandler struct {
 	ringMgr ringmgr.RingMgr
 }
 
+func (this *GetHandler) reportTime(start time.Time) {
+	elapsed := time.Since(start)
+	this.ctx.Metrics().ReportCommandGetDuration(elapsed)
+}
+
 func (this *GetHandler) Handle(req *types.BasicArr) types.BasicType {
+	startTime := time.Now()
+	defer this.reportTime(startTime)
+
 	reqElements := req.Elements()
 
 	if len(reqElements) != 2 {
