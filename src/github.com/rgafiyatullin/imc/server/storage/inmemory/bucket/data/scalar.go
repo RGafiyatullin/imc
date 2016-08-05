@@ -8,7 +8,8 @@ type ScalarValue struct {
 
 func NewScalar(value []byte) *ScalarValue {
 	v := new(ScalarValue)
-	v.value = value
+	v.value = make([]byte, len(value))
+	copy(v.value, value)
 	return v
 }
 

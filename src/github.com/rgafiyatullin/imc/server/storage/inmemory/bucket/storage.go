@@ -6,6 +6,7 @@ import (
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
+	"fmt"
 )
 
 type storage struct {
@@ -77,13 +78,8 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 }
 
 func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.BasicType, error) {
-	validThru := this.tickIdx + cmd.expiry
-	if cmd.expiry == 0 {
-		validThru = 0
-	}
-
-	this.kv.Set(cmd.key, data.NewScalar(cmd.value), validThru)
-	this.ttl.SetTTL(cmd.key, validThru)
+	this.kv.Set(cmd.key, data.NewScalar(cmd.value), 0)
+	this.ttl.SetTTL(cmd.key, 0)
 
 	return respvalues.NewStr("OK"), nil
 }
@@ -106,11 +102,38 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error)
 }
 
 func (this *storage) handleCommandLPushBack(cmd *CmdLPushBack) (respvalues.BasicType, error) {
-	return nil, errors.New("LPSHB: not implemented [storage]")
+	fmt.Printf("handleCommandLPushBack %+v [%s]\n", cmd, cmd.value)
+
+	return this.handleCommandLPushCommon(cmd.key, cmd.value, false)
 }
 
 func (this *storage) handleCommandLPushFront(cmd *CmdLPushFront) (respvalues.BasicType, error) {
-	return nil, errors.New("LPSHF: not implemented [storage]")
+	fmt.Printf("handleCommandLPushFront %+v [%s]\n", cmd, cmd.value)
+
+	return this.handleCommandLPushCommon(cmd.key, cmd.value, true)
+}
+
+func (this *storage) handleCommandLPushCommon(key string, value []byte, front bool) (respvalues.BasicType, error) {
+	kve, found := this.kv.Get(key)
+	if found {
+		switch kve.value().(type) {
+		case (*data.ListValue):
+			l := kve.value().(*data.ListValue)
+			newlen := 0
+			if front { newlen = l.PushFront(value) } else { newlen = l.PushBack(value) }
+
+			return respvalues.NewInt(int64(newlen)), nil
+
+		default:
+			return respvalues.NewErr("LPSH*: incompatible existing value for this operation"), nil
+		}
+	} else {
+		l := data.NewList()
+		if front { l.PushFront(value) } else { l.PushBack(value) }
+		this.kv.Set(key, l, 0)
+
+		return respvalues.NewInt(int64(1)), nil
+	}
 }
 
 func (this *storage) handleCommandLPopBack(cmd *CmdLPopBack) (respvalues.BasicType, error) {

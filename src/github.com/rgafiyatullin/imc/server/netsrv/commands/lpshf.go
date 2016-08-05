@@ -39,7 +39,8 @@ func (this *LPshFHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType 
 	bucketIdx := keyHash % uint32(len(buckets))
 	bucketApi := buckets[bucketIdx]
 
-	result := bucketApi.RunCmd(bucket.NewCmdLPushFront(key.String(), value.Bytes()))
+	cmd := bucket.NewCmdLPushFront(key.String(), value.Bytes())
+	result := bucketApi.RunCmd(cmd)
 
 	return result
 }

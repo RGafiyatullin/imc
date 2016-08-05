@@ -30,7 +30,6 @@ func (this *SetHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 
 	buckets := this.ringMgr.QueryBuckets()
 
-	expiry := uint64(0)
 	// XXX: sorry
 	key := reqElements[1].(*respvalues.BasicBulkStr)
 	// XXX: sorry again
@@ -40,7 +39,7 @@ func (this *SetHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	bucketIdx := keyHash % uint32(len(buckets))
 	bucketApi := buckets[bucketIdx]
 
-	result := bucketApi.RunCmd(bucket.NewCmdSet(key.String(), value.Bytes(), expiry))
+	result := bucketApi.RunCmd(bucket.NewCmdSet(key.String(), value.Bytes()))
 
 	return result
 }

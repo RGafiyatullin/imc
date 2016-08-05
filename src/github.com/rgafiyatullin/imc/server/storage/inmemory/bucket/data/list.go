@@ -15,20 +15,59 @@ func NewList() *ListValue {
 	return l
 }
 
+
+type wrapper struct {
+	bytes []byte
+}
+func newWrapper(bs []byte) *wrapper {
+	w := new(wrapper)
+	w.bytes = make([]byte, len(bs))
+	copy(w.bytes, bs)
+	return w
+}
+
 func (this *ListValue) ToRESP() respvalues.BasicType {
 	elements := list.New()
 	for elt := this.elements.Front(); elt != nil; elt = elt.Next() {
-		val := elt.Value.([]byte)
+		val := elt.Value.(*wrapper).bytes
 		elements.PushBack(respvalues.NewBulkStr(val))
 	}
 	return respvalues.NewArray(elements)
 }
 
-func (this *ListValue) Append(value []byte) int {
-	this.elements.PushBack(value)
+func (this *ListValue) PopFront() (value []byte, empty bool) {
+	if (this.elements.Len() == 0) {
+		return nil, true
+	}
+	elt := this.elements.Front()
+	this.elements.Remove(elt)
+
+	value = elt.Value.(*wrapper).bytes
+	empty = this.elements.Len() == 0
+
+	return value, empty
+}
+
+func (this *ListValue) PopBack() (value []byte, empty bool) {
+	if (this.elements.Len() == 0) {
+		return nil, true
+	}
+	elt := this.elements.Back()
+	this.elements.Remove(elt)
+
+	value = elt.Value.(*wrapper).bytes
+	empty = this.elements.Len() == 0
+
+	return value, empty
+}
+
+func (this *ListValue) PushBack(value []byte) int {
+	wrapped := newWrapper(value)
+	this.elements.PushBack(wrapped)
 	return this.elements.Len()
 }
-func (this *ListValue) Prepend(value []byte) int {
-	this.elements.PushFront(value)
+func (this *ListValue) PushFront(value []byte) int {
+	wrapped := newWrapper(value)
+	this.elements.PushFront(wrapped)
 	return this.elements.Len()
 }

@@ -21,11 +21,10 @@ func NewCmdGet(key string) Cmd {
 	return cmd
 }
 
-func NewCmdSet(key string, value []byte, expiry uint64) Cmd {
+func NewCmdSet(key string, value []byte) Cmd {
 	cmd := new(CmdSet)
 	cmd.key = key
 	cmd.value = value
-	cmd.expiry = expiry
 	return cmd
 }
 
@@ -71,7 +70,6 @@ func NewCmdLPushFront(key string, value []byte) Cmd {
 type CmdSet struct {
 	key    string
 	value  []byte
-	expiry uint64
 }
 
 func (this *CmdSet) CmdId() int {
