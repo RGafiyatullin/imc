@@ -20,6 +20,7 @@ func NewArray(el *list.List) *BasicArr {
 type BasicArr struct {
 	elements []BasicType
 }
+
 func (this *BasicArr) Elements() []BasicType {
 	return this.elements
 }

@@ -2,11 +2,11 @@ package bucket
 
 import (
 	"container/list"
+	"fmt"
+	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
-	"fmt"
 )
 
 type Bucket interface {
@@ -23,7 +23,7 @@ func (this *bucket) RunCmd(cmd Cmd) types.BasicType {
 	req := new(cmdReq)
 	req.cmd = cmd
 	req.replyTo = ch
-	return <- ch
+	return <-ch
 }
 
 func (this *bucket) Join() join.Awaitable {
@@ -33,20 +33,20 @@ func (this *bucket) Join() join.Awaitable {
 }
 
 type CmdReq interface {
-	ReplyTo() chan <- types.BasicType
+	ReplyTo() chan<- types.BasicType
 	Cmd() Cmd
 }
 type cmdReq struct {
 	replyTo chan types.BasicType
-	cmd Cmd
+	cmd     Cmd
 }
 
-func (this *cmdReq) ReplyTo() chan <- types.BasicType { return this.replyTo }
-func (this *cmdReq) Cmd() Cmd { return this.cmd }
+func (this *cmdReq) ReplyTo() chan<- types.BasicType { return this.replyTo }
+func (this *cmdReq) Cmd() Cmd                        { return this.cmd }
 
 type inChans struct {
 	join chan chan<- bool
-	cmd chan CmdReq
+	cmd  chan CmdReq
 }
 
 func StartBucket(ctx actor.Ctx, idx uint, config config.Config) Bucket {
@@ -86,7 +86,7 @@ func (this *state) loop() {
 		select {
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)
-		case cmdReq := <- this.chans.cmd:
+		case cmdReq := <-this.chans.cmd:
 			result, err := this.storage.handleCommand(cmdReq.Cmd())
 			if err != nil {
 				response := types.NewErr(fmt.Sprintf("%v", err))

@@ -1,11 +1,12 @@
 package netsrv
 
 import (
+	"fmt"
 	"github.com/rgafiyatullin/imc/protocol/resp/server"
 	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
+	"github.com/rgafiyatullin/imc/server/netsrv/commands"
 	"net"
-	"fmt"
 )
 
 const ReadBufSize int = 10
@@ -28,6 +29,7 @@ type connectionState struct {
 	cId        int
 	aId        int
 	closedChan chan<- *ClosedInfo
+	handlers   map[string]commands.CommandHandler
 }
 
 func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn, closedChan chan<- *ClosedInfo) {
@@ -40,6 +42,13 @@ func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn
 	this.aId = aId
 	this.closedChan = closedChan
 	this.protocol = server.New(sock)
+
+	this.initCommands()
+}
+
+func (this *connectionState) initCommands() {
+	this.handlers = make(map[string]commands.CommandHandler)
+	commands.NewPingHandler().Register(this.handlers)
 }
 
 func (this *connectionState) loop() {
@@ -66,10 +75,11 @@ func (this *connectionState) processRequest(req *types.BasicArr) {
 		switch elements[0].(type) {
 		case *types.BasicBulkStr:
 			cmdName := elements[0].(*types.BasicBulkStr).String()
-			switch cmdName {
-			case "PING":
-				resp = types.NewStr("PONG")
-			default:
+
+			handler, ok := this.handlers[cmdName]
+			if ok {
+				resp = handler.Handle(req)
+			} else {
 				resp = types.NewErr(fmt.Sprintf("Unknown command '%s'", cmdName))
 			}
 
