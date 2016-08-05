@@ -1,10 +1,5 @@
 package config
 
-type NetConfig interface {
-	ResetToDefaults()
-	BindSpec() string
-}
-
 type StorageConfig interface {
 	ResetToDefaults()
 	RingSize() uint
@@ -13,6 +8,7 @@ type StorageConfig interface {
 type Config interface {
 	ResetToDefaults()
 	Net() NetConfig
+	Storage() StorageConfig
 }
 
 func New() Config {
@@ -23,24 +19,6 @@ func New() Config {
 	config.storageConfig = storageConfig
 	config.ResetToDefaults()
 	return config
-}
-
-type netConfig struct {
-	bindSpec string
-}
-
-func (this *netConfig) BindSpec() string { return this.bindSpec }
-func (this *netConfig) ResetToDefaults() {
-	this.bindSpec = ":6379"
-}
-
-type storageConfig struct {
-	ringSize uint
-}
-
-func (this *storageConfig) RingSize() uint { return this.ringSize }
-func (this *storageConfig) ResetToDefaults() {
-	this.ringSize = 32
 }
 
 type config struct {

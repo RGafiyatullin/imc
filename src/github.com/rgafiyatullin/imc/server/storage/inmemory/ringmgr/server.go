@@ -2,9 +2,11 @@ package ringmgr
 
 import (
 	"container/list"
+	"fmt"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 )
 
 type RingMgr interface {
@@ -40,10 +42,27 @@ type state struct {
 	chans   *inChans
 	config  config.Config
 	joiners *list.List
+	buckets []bucket.Bucket
 }
 
-func (this *state) init() {
-	this.ctx.Log().Debug("init")
+func (this *state) init(ctx actor.Ctx, config config.Config, chans *inChans) {
+	this.joiners = list.New()
+	this.ctx = ctx
+	this.chans = chans
+	this.config = config
+
+	ringSize := this.config.Storage().RingSize()
+
+	this.buckets = make([]bucket.Bucket, ringSize)
+	var bucketIdx uint
+	for bucketIdx = 0; bucketIdx < ringSize; bucketIdx++ {
+
+		this.buckets[bucketIdx] = bucket.StartBucket(
+			this.ctx.NewChild(fmt.Sprintf("bucket-%d", bucketIdx)), bucketIdx, config)
+	}
+
+	this.ctx.Log().Debug("init [ring-size: %d]", ringSize)
+
 }
 
 func (this *state) loop() {
@@ -60,11 +79,8 @@ func (this *state) loop() {
 func ringMgrEnterLoop(ctx actor.Ctx, config config.Config, chans *inChans) {
 	ctx.Log().Info("enter loop")
 	state := new(state)
-	state.ctx = ctx
-	state.chans = chans
-	state.config = config
-	state.joiners = list.New()
-	state.init()
+
+	state.init(ctx, config, chans)
 	state.loop()
 }
 

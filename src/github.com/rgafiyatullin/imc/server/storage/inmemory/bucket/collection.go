@@ -28,7 +28,7 @@ type KVEntry interface {
 
 type TTL interface {
 	SetTTL(k string, deadline uint64)
-	FetchTimedOut(now uint64) string
+	FetchTimedOut(now uint64) (string, bool)
 }
 
 // KVEntry implementation
@@ -56,7 +56,7 @@ func (this *kventry) value() types.BasicType {
 // KV implementation
 
 type kv struct {
-	storage map[string]types.BasicType
+	storage map[string]KVEntry
 }
 
 func NewKV() KV {
@@ -87,8 +87,8 @@ func (this *ttl) SetTTL(k string, deadline uint64) {
 	// TODO: well, set the TTL
 }
 
-func (this *ttl) FetchTimedOut(now uint64) string {
+func (this *ttl) FetchTimedOut(now uint64) (string, bool) {
 	// TODO: fetch a single timed out entry
 
-	return nil
+	return "", false
 }
