@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/rgafiyatullin/imc/server/actor"
+	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/netsrv"
+	"github.com/rgafiyatullin/imc/server/storage"
 )
 
 func main() {
@@ -12,7 +14,15 @@ func main() {
 	topActorCtx := actor.NewCtx()
 	topActorCtx.Log().Info("System start")
 
-	listener, _ := netsrv.StartListener(topActorCtx.NewChild("listener"), ":6379")
+	config := config.New()
 
-	listener.Join()
+	storageSup := storage.StartSup(topActorCtx.NewChild("storage_sup"), config)
+	ringmgr := storageSup.QueryRingMgr()
+	listener, _ := netsrv.StartListener(topActorCtx.NewChild("listener"), config, ringmgr)
+
+	joinStorage := storageSup.Join()
+	joinListener := listener.Join()
+
+	joinStorage.Await()
+	joinListener.Await()
 }

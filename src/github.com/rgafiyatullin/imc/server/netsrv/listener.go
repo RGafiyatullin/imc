@@ -1,27 +1,33 @@
 package netsrv
 
 import (
+	"container/list"
 	"fmt"
 	"github.com/rgafiyatullin/imc/server/actor"
+	"github.com/rgafiyatullin/imc/server/actor/join"
+	"github.com/rgafiyatullin/imc/server/config"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 	"net"
 )
 
 type listenerChannels struct {
-	acceptedChan   chan *AcceptedInfo
-	closedChan     chan *ClosedInfo
-	terminatedChan chan *TerminatedInfo
+	acceptedChan chan *AcceptedInfo
+	closedChan   chan *ClosedInfo
+	joinChan     chan chan<- bool
 }
 
 type Listener interface {
-	Join()
+	Join() join.Awaitable
 }
 
 type listener struct {
 	chans *listenerChannels
 }
 
-func (srv *listener) Join() {
-	<-srv.chans.terminatedChan
+func (srv *listener) Join() join.Awaitable {
+	ch := join.NewChan()
+	srv.chans.joinChan <- ch
+	return join.New(ch)
 }
 
 type AcceptedInfo struct {
@@ -31,18 +37,18 @@ type ClosedInfo struct {
 	acceptorId   int
 	connectionId int
 }
-type TerminatedInfo struct{}
 
 type srvState struct {
 	actorCtx       actor.Ctx
+	ringMgr        ringmgr.RingMgr
 	acceptorsCount int
 	lSock          net.Listener
 	chans          *listenerChannels
+	joiners        *list.List
 }
 
-func StartListener(ctx actor.Ctx, addrSpec string) (Listener, error) {
-	ctx.Log().Debug("Hello there!")
-	lSock, listenErr := net.Listen("tcp", addrSpec)
+func StartListener(ctx actor.Ctx, config config.Config, ringMgr ringmgr.RingMgr) (Listener, error) {
+	lSock, listenErr := net.Listen("tcp", config.Net().BindSpec())
 	if listenErr != nil {
 		return nil, listenErr
 	}
@@ -51,25 +57,27 @@ func StartListener(ctx actor.Ctx, addrSpec string) (Listener, error) {
 	srv.chans = new(listenerChannels)
 	srv.chans.acceptedChan = make(chan *AcceptedInfo)
 	srv.chans.closedChan = make(chan *ClosedInfo)
-	srv.chans.terminatedChan = make(chan *TerminatedInfo)
+	srv.chans.joinChan = join.NewServerChan()
 
-	go listenerEnterLoop(ctx, lSock, srv.chans)
+	go listenerEnterLoop(ctx, lSock, srv.chans, ringMgr)
 
 	return srv, nil
 }
 
-func listenerEnterLoop(actorCtx actor.Ctx, lSock net.Listener, chans *listenerChannels) {
+func listenerEnterLoop(actorCtx actor.Ctx, lSock net.Listener, chans *listenerChannels, ringMgr ringmgr.RingMgr) {
 	state := new(srvState)
-	state.init(actorCtx, 10, lSock, chans)
+	state.init(actorCtx, 10, lSock, chans, ringMgr)
 	state.startAcceptors()
 	state.listenerLoop()
 }
 
-func (this *srvState) init(actorCtx actor.Ctx, acceptorsCount int, lSock net.Listener, chans *listenerChannels) {
+func (this *srvState) init(actorCtx actor.Ctx, acceptorsCount int, lSock net.Listener, chans *listenerChannels, ringMgr ringmgr.RingMgr) {
 	this.actorCtx = actorCtx
+	this.ringMgr = ringMgr
 	this.acceptorsCount = acceptorsCount
 	this.lSock = lSock
 	this.chans = chans
+	this.joiners = list.New()
 }
 
 func (this *srvState) startAcceptors() {
@@ -85,12 +93,23 @@ func (this *srvState) startAcceptor(idx int) {
 }
 
 func (this *srvState) listenerLoop() {
+	defer this.releaseJoiners()
 	for {
 		select {
 		case accepted := <-this.chans.acceptedChan:
 			this.actorCtx.Log().Debug("accepted %+v", *accepted)
 		case closed := <-this.chans.closedChan:
 			this.actorCtx.Log().Debug("closed %+v", *closed)
+		case join := <-this.chans.joinChan:
+			this.joiners.PushBack(join)
 		}
 	}
+}
+
+func (this *srvState) releaseJoiners() {
+	this.actorCtx.Log().Debug("releasing joiners...")
+	for element := this.joiners.Front(); element != nil; element = element.Next() {
+		element.Value.(chan<- bool) <- true
+	}
+	this.joiners = list.New()
 }
