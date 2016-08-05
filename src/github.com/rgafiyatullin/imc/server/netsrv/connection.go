@@ -5,6 +5,7 @@ import (
 	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"net"
+	"fmt"
 )
 
 const ReadBufSize int = 10
@@ -55,7 +56,28 @@ func (this *connectionState) loop() {
 }
 
 func (this *connectionState) processRequest(req *types.BasicArr) {
-	resp := types.NewErr("Not implemented. Coming soon :)")
+	elements := req.Elements()
+
+	var resp types.BasicType = nil
+
+	if len(elements) == 0 {
+		resp = types.NewErr("Malformed command (0 parts)")
+	} else {
+		switch elements[0].(type) {
+		case *types.BasicBulkStr:
+			cmdName := elements[0].(*types.BasicBulkStr).String()
+			switch cmdName {
+			case "PING":
+				resp = types.NewStr("PONG")
+			default:
+				resp = types.NewErr(fmt.Sprintf("Unknown command '%s'", cmdName))
+			}
+
+		default:
+			resp = types.NewErr("Malformed command (expected first element to be a bulkStr)")
+		}
+	}
+
 	this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
 	this.protocol.Write(resp)
 }
