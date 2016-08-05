@@ -10,6 +10,7 @@
 package bucket
 
 import (
+	"container/list"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 )
 
@@ -82,20 +83,108 @@ func (this *kv) Del(key string) {
 }
 
 // TTL implementation
+// quite naïve here... yep...
+type ttlentry struct {
+	key       string
+	validThru int64
+}
 
-type ttl struct{}
+type ttl struct {
+	keys    map[string]bool
+	entries *list.List
+}
 
 func NewTTL() TTL {
 	ttl := new(ttl)
+	ttl.entries = list.New()
+	ttl.keys = make(map[string]bool)
 	return ttl
 }
 
 func (this *ttl) SetTTL(k string, deadline int64) {
-	// TODO: well, set the TTL
+	_, found := this.keys[k]
+	if found {
+		if deadline == -1 {
+			this.keyRm(k)
+			delete(this.keys, k)
+		} else {
+			this.keyInsAndRm(k, deadline)
+		}
+	} else {
+		if deadline != -1 {
+			this.keyIns(k, deadline)
+			this.keys[k] = true
+		}
+	}
+}
+
+func (this *ttl) keyRm(k string) {
+	for elt := this.entries.Front(); elt != nil; elt = elt.Next() {
+		entry := elt.Value.(*ttlentry)
+		if entry.key == k {
+			this.entries.Remove(elt)
+			return
+		}
+	}
+}
+func (this *ttl) keyInsAndRm(k string, deadline int64) {
+	inserted := false
+	removed := false
+
+	newEntry := new(ttlentry)
+	newEntry.key = k
+	newEntry.validThru = deadline
+
+	for elt := this.entries.Front(); elt != nil; elt = elt.Next() {
+		entry := elt.Value.(*ttlentry)
+		if entry.key == k {
+			this.entries.Remove(elt)
+			removed = true
+
+			if removed && inserted {
+				return
+			}
+		}
+		if entry.validThru >= deadline {
+			this.entries.InsertBefore(newEntry, elt)
+			inserted = true
+
+			if removed && inserted {
+				return
+			}
+		}
+	}
+
+	this.entries.PushBack(newEntry)
+}
+func (this *ttl) keyIns(k string, deadline int64) {
+	newEntry := new(ttlentry)
+	newEntry.key = k
+	newEntry.validThru = deadline
+
+	for elt := this.entries.Front(); elt != nil; elt = elt.Next() {
+		entry := elt.Value.(*ttlentry)
+
+		if entry.validThru >= deadline {
+			this.entries.InsertBefore(newEntry, elt)
+			return
+		}
+	}
+
+	this.entries.PushBack(newEntry)
 }
 
 func (this *ttl) FetchTimedOut(now int64) (string, bool) {
-	// TODO: fetch a single timed out entry
+	if this.entries.Len() == 0 {
+		return "", false
+	}
 
-	return "", false
+	head := this.entries.Front()
+	entry := head.Value.(*ttlentry)
+	if entry.validThru < now {
+		this.entries.Remove(head)
+		return entry.key, true
+	} else {
+		return "", false
+	}
 }

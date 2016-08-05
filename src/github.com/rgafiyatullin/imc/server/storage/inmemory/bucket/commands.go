@@ -170,7 +170,7 @@ func (this *CmdExpire) CmdId() int {
 }
 
 type CmdTTL struct {
-	key string
+	key        string
 	useSeconds bool
 }
 

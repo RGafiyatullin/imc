@@ -203,15 +203,21 @@ func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType
 func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.BasicType, error) {
 	kve, found := this.kv.Get(cmd.key)
 
-	if !found { return respvalues.NewInt(-2), nil }
+	if !found {
+		return respvalues.NewInt(-2), nil
+	}
 	validThru := kve.validThru()
 
-	if (validThru == -1) { return respvalues.NewInt(-1), nil }
+	if validThru == -1 {
+		return respvalues.NewInt(-1), nil
+	}
 
 	nanosLeft := (validThru - this.tickIdx) * metronome.TickDurationNanos
 
-	if (nanosLeft < 0) { return respvalues.NewInt(-2), nil }
-	if (cmd.useSeconds) {
+	if nanosLeft < 0 {
+		return respvalues.NewInt(-2), nil
+	}
+	if cmd.useSeconds {
 		return respvalues.NewInt(int64(nanosLeft / 1000000000)), nil
 	} else {
 		return respvalues.NewInt(int64(nanosLeft / 1000000)), nil
