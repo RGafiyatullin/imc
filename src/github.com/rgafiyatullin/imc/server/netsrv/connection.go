@@ -7,6 +7,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/netsrv/commands"
 	"net"
+	"time"
 )
 
 const ReadBufSize int = 10
@@ -48,7 +49,7 @@ func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn
 
 func (this *connectionState) initCommands() {
 	this.handlers = make(map[string]commands.CommandHandler)
-	commands.NewPingHandler().Register(this.handlers)
+	commands.NewPingHandler(this.actorCtx).Register(this.handlers)
 }
 
 func (this *connectionState) loop() {
@@ -56,11 +57,15 @@ func (this *connectionState) loop() {
 
 	for {
 		cmd, err := this.protocol.NextCommand()
+
+		cmdExecStart := time.Now()
 		if err != nil {
 			this.actorCtx.Log().Warning("error reading cmd: %v", err)
 			break
 		}
 		this.processRequest(cmd)
+		cmdExecElapsed := time.Since(cmdExecStart)
+		this.actorCtx.Metrics().ReportCommandDuration(cmdExecElapsed)
 	}
 }
 
@@ -88,7 +93,7 @@ func (this *connectionState) processRequest(req *types.BasicArr) {
 		}
 	}
 
-	this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
+	//this.actorCtx.Log().Debug("processRequest [req: %s; resp: %s]", req.ToString(), resp.ToString())
 	this.protocol.Write(resp)
 }
 

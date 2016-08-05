@@ -1,5 +1,10 @@
 package config
 
+type StorageConfig interface {
+	ResetToDefaults()
+	RingSize() uint
+}
+
 type storageConfig struct {
 	ringSize uint
 }

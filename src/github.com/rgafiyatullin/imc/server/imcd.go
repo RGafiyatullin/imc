@@ -11,10 +11,10 @@ import (
 func main() {
 	fmt.Println("Helloes! I'm the IMC daemon")
 
-	topActorCtx := actor.NewCtx()
-	topActorCtx.Log().Info("System start")
-
 	config := config.New()
+
+	topActorCtx := actor.New(config)
+	topActorCtx.Log().Info("starting up")
 
 	storageSup := storage.StartSup(topActorCtx.NewChild("storage_sup"), config)
 	ringmgr := storageSup.QueryRingMgr()

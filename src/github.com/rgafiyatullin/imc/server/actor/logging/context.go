@@ -1,6 +1,9 @@
 package logging
 
-import "time"
+import (
+	"time"
+	"github.com/rgafiyatullin/imc/server/config"
+)
 
 type Ctx interface {
 	CloneWithName(name string) Ctx
@@ -54,7 +57,7 @@ func (this *ctx) Error(fmtStr string, args ...interface{}) {
 	this.message(lvlError, fmtStr, args)
 }
 
-func New() Ctx {
+func New(config config.Config) Ctx {
 	handler := NewHandler()
 	stdoutCtx := new(ctx)
 	stdoutCtx.handler_ = handler
