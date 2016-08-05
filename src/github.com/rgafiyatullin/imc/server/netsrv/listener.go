@@ -25,7 +25,7 @@ type listener struct {
 }
 
 func (srv *listener) Join() join.Awaitable {
-	ch := join.NewChan()
+	ch := join.NewClientChan()
 	srv.chans.joinChan <- ch
 	return join.New(ch)
 }

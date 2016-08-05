@@ -19,7 +19,7 @@ type ringmgr struct {
 }
 
 func (this *ringmgr) Join() join.Awaitable {
-	ch := join.NewChan()
+	ch := join.NewClientChan()
 	this.chans.join <- ch
 	return join.New(ch)
 }

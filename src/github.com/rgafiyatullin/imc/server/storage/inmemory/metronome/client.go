@@ -29,7 +29,7 @@ func (this *metronome) Unsubscribe(tickChan chan<- *Tick) {
 }
 
 func (this *metronome) Join() join.Awaitable {
-	ch := join.NewChan()
+	ch := join.NewClientChan()
 	this.inChans.join <- ch
 	return join.New(ch)
 }
