@@ -97,7 +97,7 @@ func (this *state) handleTick(t time.Time) {
 	//this.ctx.Log().Debug("tick #%d", tickIdx)
 
 	tick := NewTick(tickIdx)
-	for k,_ := range this.subscribers {
+	for k, _ := range this.subscribers {
 		k <- tick
 	}
 }

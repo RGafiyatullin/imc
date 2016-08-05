@@ -39,7 +39,9 @@ func (this *storage) handleCommand(cmd Cmd) (types.BasicType, error) {
 func (this *storage) PurgeTimedOut() {
 	for {
 		key, exists := this.ttl.FetchTimedOut(this.tickIdx)
-		if !exists { break }
+		if !exists {
+			break
+		}
 
 		this.actorCtx.Log().Debug("purging timed out key '%s'", key)
 		this.kv.Del(key)
@@ -51,7 +53,9 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (types.BasicType, error) {
 	if !found {
 		return types.NewNil(), nil
 	}
-	if kve.validThru() < this.tickIdx && kve.validThru() != 0 {
+
+	validThru := kve.validThru()
+	if validThru != 0 && validThru < this.tickIdx {
 		this.kv.Del(cmd.key)
 		this.ttl.SetTTL(cmd.key, 0)
 		return types.NewNil(), nil
