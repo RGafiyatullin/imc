@@ -139,11 +139,35 @@ func (this *storage) handleCommandLPushCommon(key string, value []byte, front bo
 }
 
 func (this *storage) handleCommandLPopBack(cmd *CmdLPopBack) (respvalues.BasicType, error) {
-	return nil, errors.New("LPOPB: not implemented [storage]")
+	return this.handleCommandLPopCommon(cmd.key, false)
 }
 
 func (this *storage) handleCommandLPopFront(cmd *CmdLPopFront) (respvalues.BasicType, error) {
-	return nil, errors.New("LPOPF: not implemented [storage]")
+	return this.handleCommandLPopCommon(cmd.key, false)
+}
+
+func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues.BasicType, error) {
+	kve, found := this.kv.Get(key)
+	if !found { return respvalues.NewNil(), nil }
+
+	switch kve.value().(type) {
+	case (*data.ListValue):
+		l := kve.value().(*data.ListValue)
+		var value []byte = nil
+		isEmpty := false
+		if front {
+			value, isEmpty = l.PopFront()
+		} else {
+			value, isEmpty = l.PopBack()
+		}
+		if isEmpty {
+			this.kv.Del(key)
+			this.ttl.SetTTL(key, 0)
+		}
+		return respvalues.NewBulkStr(value), nil
+	default:
+		return respvalues.NewErr("LPOP*: incompatible existing value for this operation"), nil
+	}
 }
 
 func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType, error) {
