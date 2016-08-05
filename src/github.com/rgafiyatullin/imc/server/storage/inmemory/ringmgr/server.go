@@ -19,8 +19,9 @@ type ringmgr struct {
 }
 
 func (this *ringmgr) Join() join.Awaitable {
-	// TODO: to be implemented
-	return join.NewStub()
+	ch := join.NewChan()
+	this.chans.join <- ch
+	return join.New(ch)
 }
 
 func StartRingMgr(ctx actor.Ctx, config config.Config) RingMgr {
@@ -41,6 +42,10 @@ type state struct {
 	joiners *list.List
 }
 
+func (this *state) init() {
+	this.ctx.Log().Debug("init")
+}
+
 func (this *state) loop() {
 	defer this.releaseJoiners()
 
@@ -59,6 +64,7 @@ func ringMgrEnterLoop(ctx actor.Ctx, config config.Config, chans *inChans) {
 	state.chans = chans
 	state.config = config
 	state.joiners = list.New()
+	state.init()
 	state.loop()
 }
 
