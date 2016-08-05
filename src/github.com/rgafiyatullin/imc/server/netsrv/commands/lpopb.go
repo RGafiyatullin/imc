@@ -29,7 +29,7 @@ func (this *LPopBHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType 
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
-	// XXX: sorry
+	// XXX
 	key := reqElements[1].(*respvalues.BasicBulkStr)
 	keyHash := ringmgr.CalcKeyHash(key)
 	bucketIdx := keyHash % uint32(len(buckets))

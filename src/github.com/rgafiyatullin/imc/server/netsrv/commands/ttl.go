@@ -29,7 +29,7 @@ func (this *TTLHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
-	// XXX: sorry
+	// XXX
 	cmd := reqElements[0].(*respvalues.BasicBulkStr).String()
 	key := reqElements[1].(*respvalues.BasicBulkStr)
 	keyHash := ringmgr.CalcKeyHash(key)

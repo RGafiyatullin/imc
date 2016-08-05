@@ -34,8 +34,8 @@ func (this *ExpireHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
-	// XXX: sorry
 
+	// XXX
 	key := reqElements[1].(*respvalues.BasicBulkStr)
 
 	expiryMSec := int64(0)

@@ -33,7 +33,7 @@ func (this *DelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	affectedRecords := respvalues.NewInt(int64(0))
 
 	for i := 1; i < len(reqElements); i++ {
-		// XXX: sorry
+		// XXX
 		key := reqElements[i].(*respvalues.BasicBulkStr)
 		keyHash := ringmgr.CalcKeyHash(key)
 		bucketIdx := keyHash % uint32(len(buckets))

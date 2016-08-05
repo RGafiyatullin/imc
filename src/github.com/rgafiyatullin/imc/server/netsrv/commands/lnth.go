@@ -30,9 +30,9 @@ func (this *LNthHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
-	// XXX: sorry
+	// XXX
 	key := reqElements[1].(*respvalues.BasicBulkStr)
-	// XXX: sorry
+	// XXX
 	idx, idxParseErr := strconv.ParseInt(reqElements[2].(*respvalues.BasicBulkStr).String(), 10, 32)
 	if idxParseErr != nil {
 		return respvalues.NewErr("LNTH: invalid idx specified")

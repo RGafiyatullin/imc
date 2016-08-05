@@ -30,9 +30,9 @@ func (this *LPshFHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType 
 
 	buckets := this.ringMgr.QueryBuckets()
 
-	// XXX: sorry
+	// XXX
 	key := reqElements[1].(*respvalues.BasicBulkStr)
-	// XXX: sorry again
+	// XXX
 	value := reqElements[2].(*respvalues.BasicBulkStr)
 
 	keyHash := ringmgr.CalcKeyHash(key)
