@@ -14,14 +14,14 @@ type Ctx interface {
 }
 
 type impl struct {
-	path_ string
-	log_  logging.Ctx
+	path_    string
+	log_     logging.Ctx
 	metrics_ metrics.Ctx
 }
 
-func (this *impl) Log() logging.Ctx { return this.log_ }
+func (this *impl) Log() logging.Ctx     { return this.log_ }
 func (this *impl) Metrics() metrics.Ctx { return this.metrics_ }
-func (this *impl) Path() string { return this.path_ }
+func (this *impl) Path() string         { return this.path_ }
 
 func (this *impl) NewChild(name string) Ctx {
 	child := new(impl)

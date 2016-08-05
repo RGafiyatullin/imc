@@ -1,8 +1,8 @@
 package logging
 
 import (
-	"time"
 	"github.com/rgafiyatullin/imc/server/config"
+	"time"
 )
 
 type Ctx interface {

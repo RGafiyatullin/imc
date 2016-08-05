@@ -89,7 +89,7 @@ func (this *srvState) startAcceptors() {
 func (this *srvState) startAcceptor(idx int) {
 	this.actorCtx.Log().Debug("Starting acceptor #%v", idx)
 	childCtx := this.actorCtx.NewChild(fmt.Sprintf("acceptor-%v", idx))
-	StartAcceptor(childCtx, idx, this.lSock, this.chans.acceptedChan, this.chans.closedChan)
+	StartAcceptor(childCtx, idx, this.lSock, this.ringMgr, this.chans.acceptedChan, this.chans.closedChan)
 }
 
 func (this *srvState) listenerLoop() {

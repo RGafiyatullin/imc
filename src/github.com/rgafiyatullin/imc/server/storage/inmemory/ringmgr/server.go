@@ -11,10 +11,12 @@ import (
 
 type RingMgr interface {
 	Join() join.Awaitable
+	QueryBuckets() []bucket.Bucket
 }
 
 type inChans struct {
-	join chan chan<- bool
+	join         chan chan<- bool
+	queryBuckets chan chan<- []bucket.Bucket
 }
 type ringmgr struct {
 	chans *inChans
@@ -24,6 +26,12 @@ func (this *ringmgr) Join() join.Awaitable {
 	ch := join.NewClientChan()
 	this.chans.join <- ch
 	return join.New(ch)
+}
+
+func (this *ringmgr) QueryBuckets() []bucket.Bucket {
+	ch := make(chan []bucket.Bucket)
+	this.chans.queryBuckets <- ch
+	return <-ch
 }
 
 func StartRingMgr(ctx actor.Ctx, config config.Config) RingMgr {

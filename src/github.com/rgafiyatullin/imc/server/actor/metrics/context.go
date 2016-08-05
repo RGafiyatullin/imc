@@ -1,11 +1,11 @@
 package metrics
 
 import (
+	"github.com/cyberdelia/go-metrics-graphite"
 	"github.com/rcrowley/go-metrics"
 	"github.com/rgafiyatullin/imc/server/actor/logging"
-	"time"
 	"github.com/rgafiyatullin/imc/server/config"
-	"github.com/cyberdelia/go-metrics-graphite"
+	"time"
 )
 
 type Ctx interface {
@@ -13,11 +13,11 @@ type Ctx interface {
 }
 
 type ctx struct {
-	log logging.Ctx
+	log    logging.Ctx
 	config config.Config
 
 	command_duration_h metrics.Histogram
-	command_rate_m metrics.Meter
+	command_rate_m     metrics.Meter
 }
 
 func (this *ctx) ReportCommandDuration(d time.Duration) {
@@ -41,7 +41,7 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 }
 
 func (this *ctx) startGraphiteReporter() {
-	if (this.config.Metrics().GraphiteEnabled()) {
+	if this.config.Metrics().GraphiteEnabled() {
 		addr := this.config.Metrics().GraphiteAddr()
 		prefix := this.config.Metrics().GraphitePrefix()
 
@@ -58,4 +58,3 @@ func New(log logging.Ctx, config config.Config) Ctx {
 	ctx.startGraphiteReporter()
 	return ctx
 }
-
