@@ -45,7 +45,7 @@ type cmdReq struct {
 }
 
 func (this *cmdReq) ReplyTo() chan<- respvalues.BasicType { return this.replyTo }
-func (this *cmdReq) Cmd() Cmd                            { return this.cmd }
+func (this *cmdReq) Cmd() Cmd                             { return this.cmd }
 
 type inChans struct {
 	join chan chan<- bool

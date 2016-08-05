@@ -3,34 +3,33 @@ package commands
 import (
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
-	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 	"time"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 )
 
-type SetHandler struct {
+type LPshFHandler struct {
 	ctx     actor.Ctx
 	ringMgr ringmgr.RingMgr
 }
 
-func (this *SetHandler) reportTime(start time.Time) {
+func (this *LPshFHandler) reportTime(start time.Time) {
 	elapsed := time.Since(start)
-	this.ctx.Metrics().ReportCommandSetDuration(elapsed)
+	this.ctx.Metrics().ReportCommandLPshFDuration(elapsed)
 }
 
-func (this *SetHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *LPshFHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
 	reqElements := req.Elements()
 
 	if len(reqElements) < 3 {
-		return respvalues.NewErr("SET: malformed command")
+		return respvalues.NewErr("LPSHF: malformed command")
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
 
-	expiry := uint64(0)
 	// XXX: sorry
 	key := reqElements[1].(*respvalues.BasicBulkStr)
 	// XXX: sorry again
@@ -40,17 +39,17 @@ func (this *SetHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	bucketIdx := keyHash % uint32(len(buckets))
 	bucketApi := buckets[bucketIdx]
 
-	result := bucketApi.RunCmd(bucket.NewCmdSet(key.String(), value.Bytes(), expiry))
+	result := bucketApi.RunCmd(bucket.NewCmdLPushFront(key.String(), value.Bytes()))
 
 	return result
 }
 
-func (this *SetHandler) Register(registry map[string]CommandHandler) {
-	registry["SET"] = this
+func (this *LPshFHandler) Register(registry map[string]CommandHandler) {
+	registry["LPSHF"] = this
 }
 
-func NewSetHandler(ctx actor.Ctx, ringMgr ringmgr.RingMgr) CommandHandler {
-	h := new(SetHandler)
+func NewLPshFHandler(ctx actor.Ctx, ringMgr ringmgr.RingMgr) CommandHandler {
+	h := new(LPshFHandler)
 	h.ctx = ctx
 	h.ringMgr = ringMgr
 	return h

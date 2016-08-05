@@ -13,20 +13,39 @@ type Ctx interface {
 	ReportCommandGetDuration(d time.Duration)
 	ReportCommandSetDuration(d time.Duration)
 	ReportCommandDelDuration(d time.Duration)
+	ReportCommandLPshFDuration(d time.Duration)
+	ReportCommandLPshBDuration(d time.Duration)
+	ReportCommandLPopFDuration(d time.Duration)
+	ReportCommandLPopBDuration(d time.Duration)
+	ReportCommandLGetNthDuration(d time.Duration)
 }
 
 type ctx struct {
 	log    logging.Ctx
 	config config.Config
 
-	command_duration_h     metrics.Histogram
-	command_rate_m         metrics.Meter
+	command_duration_h metrics.Histogram
+	command_rate_m     metrics.Meter
+
 	command_get_duration_h metrics.Histogram
 	command_get_rate_m     metrics.Meter
 	command_set_duration_h metrics.Histogram
 	command_set_rate_m     metrics.Meter
 	command_del_duration_h metrics.Histogram
 	command_del_rate_m     metrics.Meter
+
+	command_lpshf_duration_h metrics.Histogram
+	command_lpshf_rate_m     metrics.Meter
+	command_lpshb_duration_h metrics.Histogram
+	command_lpshb_rate_m     metrics.Meter
+
+	command_lpopf_duration_h metrics.Histogram
+	command_lpopf_rate_m     metrics.Meter
+	command_lpopb_duration_h metrics.Histogram
+	command_lpopb_rate_m     metrics.Meter
+
+	command_lgetnth_duration_h metrics.Histogram
+	command_lgetnth_rate_m     metrics.Meter
 }
 
 func (this *ctx) ReportCommandDuration(d time.Duration) {
@@ -53,6 +72,37 @@ func (this *ctx) ReportCommandDelDuration(d time.Duration) {
 	this.command_del_duration_h.Update(us)
 }
 
+func (this *ctx) ReportCommandLGetNthDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_lgetnth_rate_m.Mark(1)
+	this.command_lgetnth_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandLPopBDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_lpopb_rate_m.Mark(1)
+	this.command_lpopb_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandLPshBDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_lpshb_rate_m.Mark(1)
+	this.command_lpshb_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandLPopFDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_lpopf_rate_m.Mark(1)
+	this.command_lpopf_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandLPshFDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_lpshf_rate_m.Mark(1)
+	this.command_lpshf_duration_h.Update(us)
+}
+
+
 func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log = log
 	this.config = config
@@ -73,6 +123,21 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.command_del_duration_h = metrics.NewHistogram(sample)
 	this.command_del_rate_m = metrics.NewMeter()
 
+	this.command_lpshf_duration_h = metrics.NewHistogram(sample)
+	this.command_lpshf_rate_m = metrics.NewMeter()
+
+	this.command_lpshb_duration_h = metrics.NewHistogram(sample)
+	this.command_lpshb_rate_m = metrics.NewMeter()
+
+	this.command_lpopf_duration_h = metrics.NewHistogram(sample)
+	this.command_lpopf_rate_m = metrics.NewMeter()
+
+	this.command_lpopb_duration_h = metrics.NewHistogram(sample)
+	this.command_lpopb_rate_m = metrics.NewMeter()
+
+	this.command_lgetnth_duration_h = metrics.NewHistogram(sample)
+	this.command_lgetnth_rate_m = metrics.NewMeter()
+
 	metrics.DefaultRegistry.Register("netsrv.command.all.duration.h", this.command_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.command.rate.m", this.command_rate_m)
 
@@ -84,6 +149,21 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	metrics.DefaultRegistry.Register("netsrv.commands.del.duration.h", this.command_del_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.commands.del.rate.m", this.command_del_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.lpshf.duration.h", this.command_lpshf_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.lpshf.rate.m", this.command_lpshf_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.lpshb.duration.h", this.command_lpshb_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.lpshb.rate.m", this.command_lpshb_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.lpopf.duration.h", this.command_lpopf_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.lpopf.rate.m", this.command_lpopf_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.lpopb.duration.h", this.command_lpopb_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.lpopb.rate.m", this.command_lpopb_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.lgetnth.duration.h", this.command_lgetnth_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.lgetnth.rate.m", this.command_lgetnth_rate_m)
 }
 
 func (this *ctx) startGraphiteReporter() {

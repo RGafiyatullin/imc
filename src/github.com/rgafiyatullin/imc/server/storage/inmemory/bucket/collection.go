@@ -10,7 +10,7 @@
 package bucket
 
 import (
-	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 )
 
 type KV interface {
@@ -18,14 +18,14 @@ type KV interface {
 	Get(key string) (KVEntry, bool)
 
 	// Creates and stores a new KVEntry associated with the given key
-	Set(key string, value respvalues.BasicType, validThru uint64)
+	Set(key string, value data.Value, validThru uint64)
 
 	Del(key string)
 }
 
 type KVEntry interface {
 	validThru() uint64
-	value() respvalues.BasicType
+	value() data.Value
 }
 
 type TTL interface {
@@ -37,10 +37,10 @@ type TTL interface {
 
 type kventry struct {
 	validThru_ uint64
-	value_     respvalues.BasicType
+	value_     data.Value
 }
 
-func NewKVEntry(value respvalues.BasicType, validThru uint64) KVEntry {
+func NewKVEntry(value data.Value, validThru uint64) KVEntry {
 	entry := new(kventry)
 	entry.value_ = value
 	entry.validThru_ = validThru
@@ -51,7 +51,7 @@ func (this *kventry) validThru() uint64 {
 	return this.validThru_
 }
 
-func (this *kventry) value() respvalues.BasicType {
+func (this *kventry) value() data.Value {
 	return this.value_
 }
 
@@ -72,7 +72,7 @@ func (this *kv) Get(k string) (KVEntry, bool) {
 	return kve, found
 }
 
-func (this *kv) Set(key string, value respvalues.BasicType, validThru uint64) {
+func (this *kv) Set(key string, value data.Value, validThru uint64) {
 	entry := NewKVEntry(value, validThru)
 	this.storage[key] = entry
 }
