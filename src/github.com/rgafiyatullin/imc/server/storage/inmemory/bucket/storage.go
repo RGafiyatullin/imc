@@ -5,17 +5,19 @@ import (
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
 )
 
 type storage struct {
 	actorCtx actor.Ctx
-	tickIdx  uint64
+	tickIdx  int64
 	kv       KV
 	ttl      TTL
 }
 
-func NewStorage() *storage {
+func NewStorage(actorCtx actor.Ctx) *storage {
 	s := new(storage)
+	s.actorCtx = actorCtx
 	s.tickIdx = 0
 	s.kv = NewKV()
 	s.ttl = NewTTL()
@@ -42,6 +44,10 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.BasicType, error) {
 		return this.handleCommandLPopFront(cmd.(*CmdLPopFront))
 	case cmdLGetNth:
 		return this.handleCommandLGetNth(cmd.(*CmdLGetNth))
+	case cmdExpire:
+		return this.handleCommandExpire(cmd.(*CmdExpire))
+	case cmdTTL:
+		return this.handleCommandTTL(cmd.(*CmdTTL))
 	default:
 		return nil, errors.New("unsupported command")
 	}
@@ -66,9 +72,9 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 	}
 
 	validThru := kve.validThru()
-	if validThru != 0 && validThru < this.tickIdx {
+	if validThru != -1 && validThru < this.tickIdx {
 		this.kv.Del(cmd.key)
-		this.ttl.SetTTL(cmd.key, 0)
+		this.ttl.SetTTL(cmd.key, -1)
 		return respvalues.NewNil(), nil
 	}
 
@@ -76,8 +82,8 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 }
 
 func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.BasicType, error) {
-	this.kv.Set(cmd.key, data.NewScalar(cmd.value), 0)
-	this.ttl.SetTTL(cmd.key, 0)
+	this.kv.Set(cmd.key, data.NewScalar(cmd.value), -1)
+	this.ttl.SetTTL(cmd.key, -1)
 
 	return respvalues.NewStr("OK"), nil
 }
@@ -89,10 +95,11 @@ func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.BasicType, 
 func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error) {
 	kve, existed := this.kv.Get(cmd.key)
 	this.kv.Del(cmd.key)
-	this.ttl.SetTTL(cmd.key, uint64(0))
+	this.ttl.SetTTL(cmd.key, int64(-1))
 
 	affectedRecords := int64(0)
-	if existed && kve.validThru() >= this.tickIdx {
+	validThru := kve.validThru()
+	if validThru == -1 || existed && validThru >= this.tickIdx {
 		affectedRecords = 1
 	}
 
@@ -148,7 +155,9 @@ func (this *storage) handleCommandLPopFront(cmd *CmdLPopFront) (respvalues.Basic
 
 func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues.BasicType, error) {
 	kve, found := this.kv.Get(key)
-	if !found { return respvalues.NewNil(), nil }
+	if !found {
+		return respvalues.NewNil(), nil
+	}
 
 	switch kve.value().(type) {
 	case (*data.ListValue):
@@ -162,7 +171,7 @@ func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues
 		}
 		if isEmpty {
 			this.kv.Del(key)
-			this.ttl.SetTTL(key, 0)
+			this.ttl.SetTTL(key, -1)
 		}
 		return respvalues.NewBulkStr(value), nil
 	default:
@@ -189,4 +198,41 @@ func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType
 	default:
 		return respvalues.NewErr("LNTH: incompatible existing value for this operation"), nil
 	}
+}
+
+func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.BasicType, error) {
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found { return respvalues.NewInt(-2), nil }
+	validThru := kve.validThru()
+
+	if (validThru == -1) { return respvalues.NewInt(-1), nil }
+
+	nanosLeft := (validThru - this.tickIdx) * metronome.TickDurationNanos
+
+	if (nanosLeft < 0) { return respvalues.NewInt(-2), nil }
+	if (cmd.useSeconds) {
+		return respvalues.NewInt(int64(nanosLeft / 1000000000)), nil
+	} else {
+		return respvalues.NewInt(int64(nanosLeft / 1000000)), nil
+	}
+}
+
+func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, error) {
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found {
+		return respvalues.NewInt(0), nil
+	}
+
+	validThru := int64(-1)
+	if cmd.expiry != -1 {
+		expiryTicks := cmd.expiry * 1000000 / metronome.TickDurationNanos
+		validThru = this.tickIdx + expiryTicks
+	}
+
+	this.kv.Set(cmd.key, kve.value(), validThru)
+	this.ttl.SetTTL(cmd.key, validThru)
+
+	return respvalues.NewInt(1), nil
 }

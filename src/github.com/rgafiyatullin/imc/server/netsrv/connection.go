@@ -61,6 +61,8 @@ func (this *connectionState) initCommands() {
 	commands.NewLPopFHandler(this.actorCtx.NewChild("#LPOPF"), this.ringMgr).Register(this.handlers)
 	commands.NewLPopBHandler(this.actorCtx.NewChild("#LPOPB"), this.ringMgr).Register(this.handlers)
 	commands.NewLNthHandler(this.actorCtx.NewChild("#LNTH"), this.ringMgr).Register(this.handlers)
+	commands.NewExpireHandler(this.actorCtx.NewChild("#EXPIRE"), this.ringMgr).Register(this.handlers)
+	commands.NewTTLHandler(this.actorCtx.NewChild("#TTL"), this.ringMgr).Register(this.handlers)
 }
 
 func (this *connectionState) loop() {

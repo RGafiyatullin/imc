@@ -18,36 +18,36 @@ type KV interface {
 	Get(key string) (KVEntry, bool)
 
 	// Creates and stores a new KVEntry associated with the given key
-	Set(key string, value data.Value, validThru uint64)
+	Set(key string, value data.Value, validThru int64)
 
 	Del(key string)
 }
 
 type KVEntry interface {
-	validThru() uint64
+	validThru() int64
 	value() data.Value
 }
 
 type TTL interface {
-	SetTTL(k string, deadline uint64)
-	FetchTimedOut(now uint64) (string, bool)
+	SetTTL(k string, deadline int64)
+	FetchTimedOut(now int64) (string, bool)
 }
 
 // KVEntry implementation
 
 type kventry struct {
-	validThru_ uint64
+	validThru_ int64
 	value_     data.Value
 }
 
-func NewKVEntry(value data.Value, validThru uint64) KVEntry {
+func NewKVEntry(value data.Value, validThru int64) KVEntry {
 	entry := new(kventry)
 	entry.value_ = value
 	entry.validThru_ = validThru
 	return entry
 }
 
-func (this *kventry) validThru() uint64 {
+func (this *kventry) validThru() int64 {
 	return this.validThru_
 }
 
@@ -72,7 +72,7 @@ func (this *kv) Get(k string) (KVEntry, bool) {
 	return kve, found
 }
 
-func (this *kv) Set(key string, value data.Value, validThru uint64) {
+func (this *kv) Set(key string, value data.Value, validThru int64) {
 	entry := NewKVEntry(value, validThru)
 	this.storage[key] = entry
 }
@@ -90,11 +90,11 @@ func NewTTL() TTL {
 	return ttl
 }
 
-func (this *ttl) SetTTL(k string, deadline uint64) {
+func (this *ttl) SetTTL(k string, deadline int64) {
 	// TODO: well, set the TTL
 }
 
-func (this *ttl) FetchTimedOut(now uint64) (string, bool) {
+func (this *ttl) FetchTimedOut(now int64) (string, bool) {
 	// TODO: fetch a single timed out entry
 
 	return "", false

@@ -81,7 +81,7 @@ func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *in
 	this.config = config
 	this.chans = chans
 	this.joiners = list.New()
-	this.storage = NewStorage()
+	this.storage = NewStorage(ctx.NewChild("#storage"))
 	this.metronome = m
 
 	tickChan := metronome.NewChan()

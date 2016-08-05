@@ -11,6 +11,9 @@ const cmdLPopBack = 7
 const cmdLPopFront = 8
 const cmdLGetNth = 9
 
+const cmdExpire = 10
+const cmdTTL = 11
+
 type Cmd interface {
 	CmdId() int
 }
@@ -64,6 +67,20 @@ func NewCmdLPushFront(key string, value []byte) Cmd {
 	cmd := new(CmdLPushFront)
 	cmd.key = key
 	cmd.value = value
+	return cmd
+}
+
+func NewCmdExpire(key string, expiry int64) Cmd {
+	cmd := new(CmdExpire)
+	cmd.key = key
+	cmd.expiry = expiry
+	return cmd
+}
+
+func NewCmdTTL(key string, useSeconds bool) Cmd {
+	cmd := new(CmdTTL)
+	cmd.key = key
+	cmd.useSeconds = useSeconds
 	return cmd
 }
 
@@ -141,4 +158,22 @@ type CmdLGetNth struct {
 
 func (this *CmdLGetNth) CmdId() int {
 	return cmdLGetNth
+}
+
+type CmdExpire struct {
+	key    string
+	expiry int64
+}
+
+func (this *CmdExpire) CmdId() int {
+	return cmdExpire
+}
+
+type CmdTTL struct {
+	key string
+	useSeconds bool
+}
+
+func (this *CmdTTL) CmdId() int {
+	return cmdTTL
 }
