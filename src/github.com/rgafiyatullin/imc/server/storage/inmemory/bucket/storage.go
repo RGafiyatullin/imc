@@ -2,11 +2,9 @@ package bucket
 
 import (
 	"errors"
-
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
-	"fmt"
 )
 
 type storage struct {
@@ -102,14 +100,10 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error)
 }
 
 func (this *storage) handleCommandLPushBack(cmd *CmdLPushBack) (respvalues.BasicType, error) {
-	fmt.Printf("handleCommandLPushBack %+v [%s]\n", cmd, cmd.value)
-
 	return this.handleCommandLPushCommon(cmd.key, cmd.value, false)
 }
 
 func (this *storage) handleCommandLPushFront(cmd *CmdLPushFront) (respvalues.BasicType, error) {
-	fmt.Printf("handleCommandLPushFront %+v [%s]\n", cmd, cmd.value)
-
 	return this.handleCommandLPushCommon(cmd.key, cmd.value, true)
 }
 
@@ -120,7 +114,11 @@ func (this *storage) handleCommandLPushCommon(key string, value []byte, front bo
 		case (*data.ListValue):
 			l := kve.value().(*data.ListValue)
 			newlen := 0
-			if front { newlen = l.PushFront(value) } else { newlen = l.PushBack(value) }
+			if front {
+				newlen = l.PushFront(value)
+			} else {
+				newlen = l.PushBack(value)
+			}
 
 			return respvalues.NewInt(int64(newlen)), nil
 
@@ -129,7 +127,11 @@ func (this *storage) handleCommandLPushCommon(key string, value []byte, front bo
 		}
 	} else {
 		l := data.NewList()
-		if front { l.PushFront(value) } else { l.PushBack(value) }
+		if front {
+			l.PushFront(value)
+		} else {
+			l.PushBack(value)
+		}
 		this.kv.Set(key, l, 0)
 
 		return respvalues.NewInt(int64(1)), nil
@@ -145,5 +147,22 @@ func (this *storage) handleCommandLPopFront(cmd *CmdLPopFront) (respvalues.Basic
 }
 
 func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType, error) {
-	return nil, errors.New("LNTH: not implemented [storage]")
+	kve, found := this.kv.Get(cmd.key)
+	if !found {
+		return respvalues.NewNil(), nil
+	}
+
+	switch kve.value().(type) {
+	case (*data.ListValue):
+		l := kve.value().(*data.ListValue)
+		value, found := l.Nth(cmd.idx)
+
+		if !found {
+			return respvalues.NewNil(), nil
+		} else {
+			return respvalues.NewBulkStr(value), nil
+		}
+	default:
+		return respvalues.NewErr("LNTH: incompatible existing value for this operation"), nil
+	}
 }

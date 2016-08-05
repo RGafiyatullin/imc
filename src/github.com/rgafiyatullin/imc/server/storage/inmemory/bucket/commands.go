@@ -68,8 +68,8 @@ func NewCmdLPushFront(key string, value []byte) Cmd {
 }
 
 type CmdSet struct {
-	key    string
-	value  []byte
+	key   string
+	value []byte
 }
 
 func (this *CmdSet) CmdId() int {

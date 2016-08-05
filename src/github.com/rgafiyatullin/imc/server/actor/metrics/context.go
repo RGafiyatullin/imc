@@ -102,7 +102,6 @@ func (this *ctx) ReportCommandLPshFDuration(d time.Duration) {
 	this.command_lpshf_duration_h.Update(us)
 }
 
-
 func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log = log
 	this.config = config
