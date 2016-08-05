@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rgafiyatullin/imc/protocol/resp/constants"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"net"
 	"net/textproto"
 	"strconv"
 )
 
 type Context interface {
-	NextCommand() (*types.BasicArr, error)
-	Write(data types.BasicType)
+	NextCommand() (*respvalues.BasicArr, error)
+	Write(data respvalues.BasicType)
 }
 type context struct {
 	sock net.Conn
@@ -27,7 +27,7 @@ func New(sock net.Conn) Context {
 	return ctx
 }
 
-func (this *context) NextCommand() (*types.BasicArr, error) {
+func (this *context) NextCommand() (*respvalues.BasicArr, error) {
 	line, err := this.text.ReadLine()
 	if err != nil {
 		return nil, err
@@ -51,11 +51,11 @@ func (this *context) NextCommand() (*types.BasicArr, error) {
 	}
 }
 
-func (this *context) Write(data types.BasicType) {
+func (this *context) Write(data respvalues.BasicType) {
 	data.Write(this.text)
 }
 
-func (this *context) processArray(count64 int64) (*types.BasicArr, error) {
+func (this *context) processArray(count64 int64) (*respvalues.BasicArr, error) {
 	count := int(count64)
 	elements := list.New()
 	for i := 0; i < count; i++ {
@@ -66,10 +66,10 @@ func (this *context) processArray(count64 int64) (*types.BasicArr, error) {
 
 		elements.PushBack(element)
 	}
-	return types.NewArray(elements), nil
+	return respvalues.NewArray(elements), nil
 }
 
-func (this *context) processCommandElement() (types.BasicType, error) {
+func (this *context) processCommandElement() (respvalues.BasicType, error) {
 	line, err := this.text.ReadLine()
 	if err != nil {
 		return nil, err
@@ -84,13 +84,13 @@ func (this *context) processCommandElement() (types.BasicType, error) {
 		if err != nil {
 			return nil, err
 		}
-		return types.NewInt(value), nil
+		return respvalues.NewInt(value), nil
 
 	case constants.PrefixError:
-		return types.NewErr(line[1:]), nil
+		return respvalues.NewErr(line[1:]), nil
 
 	case constants.PrefixStr:
-		return types.NewStr(line[1:]), nil
+		return respvalues.NewStr(line[1:]), nil
 
 	case constants.PrefixArray:
 		count, err := strconv.ParseInt(line[1:], 10, 64)
@@ -113,7 +113,7 @@ func (this *context) processCommandElement() (types.BasicType, error) {
 		if err != nil {
 			return nil, err
 		}
-		return types.NewBulkStr(bytesPeeked), nil
+		return respvalues.NewBulkStr(bytesPeeked), nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Unexpected type-prefix: '%v'", line[0]))
 	}

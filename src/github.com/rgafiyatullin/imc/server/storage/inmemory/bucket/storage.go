@@ -2,7 +2,8 @@ package bucket
 
 import (
 	"errors"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 )
 
@@ -21,7 +22,7 @@ func NewStorage() *storage {
 	return s
 }
 
-func (this *storage) handleCommand(cmd Cmd) (types.BasicType, error) {
+func (this *storage) handleCommand(cmd Cmd) (respvalues.BasicType, error) {
 	switch cmd.CmdId() {
 	case cmdGet:
 		return this.handleCommandGet(cmd.(*CmdGet))
@@ -48,23 +49,23 @@ func (this *storage) PurgeTimedOut() {
 	}
 }
 
-func (this *storage) handleCommandGet(cmd *CmdGet) (types.BasicType, error) {
+func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error) {
 	kve, found := this.kv.Get(cmd.key)
 	if !found {
-		return types.NewNil(), nil
+		return respvalues.NewNil(), nil
 	}
 
 	validThru := kve.validThru()
 	if validThru != 0 && validThru < this.tickIdx {
 		this.kv.Del(cmd.key)
 		this.ttl.SetTTL(cmd.key, 0)
-		return types.NewNil(), nil
+		return respvalues.NewNil(), nil
 	}
 
 	return kve.value(), nil
 }
 
-func (this *storage) handleCommandSet(cmd *CmdSet) (types.BasicType, error) {
+func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.BasicType, error) {
 	validThru := this.tickIdx + cmd.expiry
 	if cmd.expiry == 0 {
 		validThru = 0
@@ -73,14 +74,14 @@ func (this *storage) handleCommandSet(cmd *CmdSet) (types.BasicType, error) {
 	this.kv.Set(cmd.key, cmd.value, validThru)
 	this.ttl.SetTTL(cmd.key, validThru)
 
-	return types.NewStr("OK"), nil
+	return respvalues.NewStr("OK"), nil
 }
 
-func (this *storage) handleCommandExists(cmd *CmdExists) (types.BasicType, error) {
+func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.BasicType, error) {
 	return nil, errors.New("EXISTS: Not implemented")
 }
 
-func (this *storage) handleCommandDel(cmd *CmdDel) (types.BasicType, error) {
+func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error) {
 	kve, existed := this.kv.Get(cmd.key)
 	this.kv.Del(cmd.key)
 	this.ttl.SetTTL(cmd.key, uint64(0))
@@ -90,5 +91,5 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (types.BasicType, error) {
 		affectedRecords = 1
 	}
 
-	return types.NewInt(affectedRecords), nil
+	return respvalues.NewInt(affectedRecords), nil
 }

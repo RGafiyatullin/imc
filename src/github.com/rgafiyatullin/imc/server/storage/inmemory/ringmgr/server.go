@@ -3,7 +3,7 @@ package ringmgr
 import (
 	"container/list"
 	"fmt"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
@@ -49,7 +49,7 @@ func StartRingMgr(ctx actor.Ctx, config config.Config, metronome metronome.Metro
 	return m
 }
 
-func CalcKeyHash(key *types.BasicBulkStr) uint32 {
+func CalcKeyHash(key *respvalues.BasicBulkStr) uint32 {
 	return crc32.ChecksumIEEE(key.Bytes())
 }
 

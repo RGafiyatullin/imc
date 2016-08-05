@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
@@ -18,19 +18,19 @@ func (this *GetHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandGetDuration(elapsed)
 }
 
-func (this *GetHandler) Handle(req *types.BasicArr) types.BasicType {
+func (this *GetHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
 	reqElements := req.Elements()
 
 	if len(reqElements) != 2 {
-		return types.NewErr("GET: malformed command")
+		return respvalues.NewErr("GET: malformed command")
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
 	// XXX: sorry
-	key := reqElements[1].(*types.BasicBulkStr)
+	key := reqElements[1].(*respvalues.BasicBulkStr)
 	keyHash := ringmgr.CalcKeyHash(key)
 	bucketIdx := keyHash % uint32(len(buckets))
 	bucketApi := buckets[bucketIdx]

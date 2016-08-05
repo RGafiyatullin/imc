@@ -3,7 +3,8 @@ package bucket
 import (
 	"container/list"
 	"fmt"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
@@ -12,15 +13,15 @@ import (
 
 type Bucket interface {
 	Join() join.Awaitable
-	RunCmd(cmd Cmd) types.BasicType
+	RunCmd(cmd Cmd) respvalues.BasicType
 }
 
 type bucket struct {
 	chans *inChans
 }
 
-func (this *bucket) RunCmd(cmd Cmd) types.BasicType {
-	ch := make(chan types.BasicType, 1)
+func (this *bucket) RunCmd(cmd Cmd) respvalues.BasicType {
+	ch := make(chan respvalues.BasicType, 1)
 	req := new(cmdReq)
 	req.cmd = cmd
 	req.replyTo = ch
@@ -35,16 +36,16 @@ func (this *bucket) Join() join.Awaitable {
 }
 
 type CmdReq interface {
-	ReplyTo() chan<- types.BasicType
+	ReplyTo() chan<- respvalues.BasicType
 	Cmd() Cmd
 }
 type cmdReq struct {
-	replyTo chan types.BasicType
+	replyTo chan respvalues.BasicType
 	cmd     Cmd
 }
 
-func (this *cmdReq) ReplyTo() chan<- types.BasicType { return this.replyTo }
-func (this *cmdReq) Cmd() Cmd                        { return this.cmd }
+func (this *cmdReq) ReplyTo() chan<- respvalues.BasicType { return this.replyTo }
+func (this *cmdReq) Cmd() Cmd                            { return this.cmd }
 
 type inChans struct {
 	join chan chan<- bool
@@ -102,7 +103,7 @@ func (this *state) loop() {
 		case cmdReq := <-this.chans.cmd:
 			result, err := this.storage.handleCommand(cmdReq.Cmd())
 			if err != nil {
-				response := types.NewErr(fmt.Sprintf("%v", err))
+				response := respvalues.NewErr(fmt.Sprintf("%v", err))
 				cmdReq.ReplyTo() <- response
 			} else {
 				cmdReq.ReplyTo() <- result

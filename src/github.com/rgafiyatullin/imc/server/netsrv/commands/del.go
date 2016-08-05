@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
@@ -18,28 +18,28 @@ func (this *DelHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandDelDuration(elapsed)
 }
 
-func (this *DelHandler) Handle(req *types.BasicArr) types.BasicType {
+func (this *DelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
 	reqElements := req.Elements()
 
 	if len(reqElements) < 2 {
-		return types.NewErr("DEL: malformed command")
+		return respvalues.NewErr("DEL: malformed command")
 	}
 
 	buckets := this.ringMgr.QueryBuckets()
 
-	affectedRecords := types.NewInt(int64(0))
+	affectedRecords := respvalues.NewInt(int64(0))
 
 	for i := 1; i < len(reqElements); i++ {
 		// XXX: sorry
-		key := reqElements[i].(*types.BasicBulkStr)
+		key := reqElements[i].(*respvalues.BasicBulkStr)
 		keyHash := ringmgr.CalcKeyHash(key)
 		bucketIdx := keyHash % uint32(len(buckets))
 		bucketApi := buckets[bucketIdx]
 		keyResult := bucketApi.RunCmd(bucket.NewCmdDel(key.String()))
-		affectedRecords = affectedRecords.Plus(keyResult.(*types.BasicInt))
+		affectedRecords = affectedRecords.Plus(keyResult.(*respvalues.BasicInt))
 	}
 
 	return affectedRecords

@@ -2,8 +2,8 @@ package netsrv
 
 import (
 	"fmt"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/protocol/resp/server"
-	"github.com/rgafiyatullin/imc/protocol/resp/types"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/netsrv/commands"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
@@ -75,27 +75,27 @@ func (this *connectionState) loop() {
 	}
 }
 
-func (this *connectionState) processRequest(req *types.BasicArr) {
+func (this *connectionState) processRequest(req *respvalues.BasicArr) {
 	elements := req.Elements()
 
-	var resp types.BasicType = nil
+	var resp respvalues.BasicType = nil
 
 	if len(elements) == 0 {
-		resp = types.NewErr("Malformed command (0 parts)")
+		resp = respvalues.NewErr("Malformed command (0 parts)")
 	} else {
 		switch elements[0].(type) {
-		case *types.BasicBulkStr:
-			cmdName := elements[0].(*types.BasicBulkStr).String()
+		case *respvalues.BasicBulkStr:
+			cmdName := elements[0].(*respvalues.BasicBulkStr).String()
 
 			handler, ok := this.handlers[cmdName]
 			if ok {
 				resp = handler.Handle(req)
 			} else {
-				resp = types.NewErr(fmt.Sprintf("Unknown command '%s'", cmdName))
+				resp = respvalues.NewErr(fmt.Sprintf("Unknown command '%s'", cmdName))
 			}
 
 		default:
-			resp = types.NewErr("Malformed command (expected first element to be a bulkStr)")
+			resp = respvalues.NewErr("Malformed command (expected first element to be a bulkStr)")
 		}
 	}
 

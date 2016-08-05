@@ -1,8 +1,10 @@
 package commands
 
-import "github.com/rgafiyatullin/imc/protocol/resp/types"
+import (
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
+)
 
 type CommandHandler interface {
 	Register(map[string]CommandHandler)
-	Handle(req *types.BasicArr) types.BasicType
+	Handle(req *respvalues.BasicArr) respvalues.BasicType
 }

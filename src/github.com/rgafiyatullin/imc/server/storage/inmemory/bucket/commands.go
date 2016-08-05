@@ -1,6 +1,8 @@
 package bucket
 
-import "github.com/rgafiyatullin/imc/protocol/resp/types"
+import (
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
+)
 
 const cmdSet = 1
 const cmdGet = 2
@@ -17,7 +19,7 @@ func NewCmdGet(key string) Cmd {
 	return cmd
 }
 
-func NewCmdSet(key string, value types.BasicType, expiry uint64) Cmd {
+func NewCmdSet(key string, value respvalues.BasicType, expiry uint64) Cmd {
 	cmd := new(CmdSet)
 	cmd.key = key
 	cmd.value = value
@@ -33,7 +35,7 @@ func NewCmdDel(key string) Cmd {
 
 type CmdSet struct {
 	key    string
-	value  types.BasicType
+	value  respvalues.BasicType
 	expiry uint64
 }
 

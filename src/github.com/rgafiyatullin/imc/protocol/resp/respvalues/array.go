@@ -1,4 +1,4 @@
-package types
+package respvalues
 
 import (
 	"container/list"
