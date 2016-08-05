@@ -8,6 +8,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
 	"hash/crc32"
 )
 
@@ -36,14 +37,14 @@ func (this *ringmgr) QueryBuckets() []bucket.Bucket {
 	return <-ch
 }
 
-func StartRingMgr(ctx actor.Ctx, config config.Config) RingMgr {
+func StartRingMgr(ctx actor.Ctx, config config.Config, metronome metronome.Metronome) RingMgr {
 	chans := new(inChans)
 	chans.join = join.NewServerChan()
 	chans.queryBuckets = make(chan chan<- []bucket.Bucket, 32)
 	m := new(ringmgr)
 	m.chans = chans
 
-	go ringMgrEnterLoop(ctx, config, chans)
+	go ringMgrEnterLoop(ctx, config, chans, metronome)
 
 	return m
 }
@@ -60,7 +61,7 @@ type state struct {
 	buckets []bucket.Bucket
 }
 
-func (this *state) init(ctx actor.Ctx, config config.Config, chans *inChans) {
+func (this *state) init(ctx actor.Ctx, config config.Config, chans *inChans, metronome metronome.Metronome) {
 	this.joiners = list.New()
 	this.ctx = ctx
 	this.chans = chans
@@ -73,7 +74,8 @@ func (this *state) init(ctx actor.Ctx, config config.Config, chans *inChans) {
 	for bucketIdx = 0; bucketIdx < ringSize; bucketIdx++ {
 
 		this.buckets[bucketIdx] = bucket.StartBucket(
-			this.ctx.NewChild(fmt.Sprintf("bucket-%d", bucketIdx)), bucketIdx, config)
+			this.ctx.NewChild(fmt.Sprintf("bucket-%d", bucketIdx)),
+			bucketIdx, config, metronome)
 	}
 
 	this.ctx.Log().Debug("init [ring-size: %d]", ringSize)
@@ -93,11 +95,11 @@ func (this *state) loop() {
 	}
 }
 
-func ringMgrEnterLoop(ctx actor.Ctx, config config.Config, chans *inChans) {
+func ringMgrEnterLoop(ctx actor.Ctx, config config.Config, chans *inChans, metronome metronome.Metronome) {
 	ctx.Log().Info("enter loop")
 	state := new(state)
 
-	state.init(ctx, config, chans)
+	state.init(ctx, config, chans, metronome)
 	state.loop()
 }
 

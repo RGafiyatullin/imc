@@ -7,6 +7,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
+	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
 )
 
 type Bucket interface {
@@ -50,34 +51,41 @@ type inChans struct {
 	cmd  chan CmdReq
 }
 
-func StartBucket(ctx actor.Ctx, idx uint, config config.Config) Bucket {
+func StartBucket(ctx actor.Ctx, idx uint, config config.Config, metronome metronome.Metronome) Bucket {
 	chans := new(inChans)
 	chans.join = join.NewServerChan()
 	chans.cmd = make(chan CmdReq)
 	bucket := new(bucket)
 	bucket.chans = chans
 
-	go bucketEnterLoop(ctx, idx, config, chans)
+	go bucketEnterLoop(ctx, idx, config, chans, metronome)
 
 	return bucket
 }
 
 type state struct {
-	ctx     actor.Ctx
-	idx     uint
-	config  config.Config
-	chans   *inChans
-	joiners *list.List
-	storage *storage
+	ctx       actor.Ctx
+	idx       uint
+	config    config.Config
+	chans     *inChans
+	joiners   *list.List
+	storage   *storage
+	metronome metronome.Metronome
+	tickChan  <-chan metronome.Tick
 }
 
-func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *inChans) {
+func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *inChans, m metronome.Metronome) {
 	this.ctx = ctx
 	this.idx = idx
 	this.config = config
 	this.chans = chans
 	this.joiners = list.New()
 	this.storage = NewStorage()
+	this.metronome = m
+
+	tickChan := metronome.NewChan()
+	this.tickChan = tickChan
+	this.metronome.Subscribe(tickChan)
 
 	this.ctx.Log().Debug("init")
 }
@@ -85,6 +93,10 @@ func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *in
 func (this *state) loop() {
 	for {
 		select {
+		case tick := <-this.tickChan:
+			this.storage.tickIdx = tick.CurrentTickIdx()
+			this.storage.PurgeTimedOut()
+
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)
 		case cmdReq := <-this.chans.cmd:
@@ -100,9 +112,9 @@ func (this *state) loop() {
 	}
 }
 
-func bucketEnterLoop(ctx actor.Ctx, idx uint, config config.Config, chans *inChans) {
+func bucketEnterLoop(ctx actor.Ctx, idx uint, config config.Config, chans *inChans, metronome metronome.Metronome) {
 	state := new(state)
 
-	state.init(ctx, idx, config, chans)
+	state.init(ctx, idx, config, chans, metronome)
 	state.loop()
 }

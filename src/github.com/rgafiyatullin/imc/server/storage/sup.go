@@ -65,7 +65,7 @@ func (this *state) loop() {
 	defer this.releaseJoiners()
 
 	metronome := metronome.StartMetronome(this.ctx.NewChild("metronome"))
-	ringmgr := ringmgr.StartRingMgr(this.ctx.NewChild("ring_mgr"), this.config)
+	ringmgr := ringmgr.StartRingMgr(this.ctx.NewChild("ring_mgr"), this.config, metronome)
 
 	for {
 		select {

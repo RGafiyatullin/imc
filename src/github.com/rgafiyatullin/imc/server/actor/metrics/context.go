@@ -19,8 +19,8 @@ type ctx struct {
 	log    logging.Ctx
 	config config.Config
 
-	command_duration_h metrics.Histogram
-	command_rate_m     metrics.Meter
+	command_duration_h     metrics.Histogram
+	command_rate_m         metrics.Meter
 	command_get_duration_h metrics.Histogram
 	command_get_rate_m     metrics.Meter
 	command_set_duration_h metrics.Histogram
@@ -72,7 +72,6 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	this.command_del_duration_h = metrics.NewHistogram(sample)
 	this.command_del_rate_m = metrics.NewMeter()
-
 
 	metrics.DefaultRegistry.Register("netsrv.command.all.duration.h", this.command_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.command.rate.m", this.command_rate_m)

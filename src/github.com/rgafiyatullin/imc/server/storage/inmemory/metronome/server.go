@@ -4,18 +4,27 @@ import (
 	"container/list"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
+	"time"
 )
 
+const TickDurationNanos = 100000000
+
 type Tick interface {
-	t() uint64
+	CurrentTickIdx() uint64
 }
 
 type tick struct {
-	t_ uint64
+	t uint64
 }
 
-func (this *tick) t() uint64 {
-	return this.t_
+func NewTick(idx uint64) Tick {
+	tick := new(tick)
+	tick.t = idx
+	return tick
+}
+
+func (this *tick) CurrentTickIdx() uint64 {
+	return this.t
 }
 
 type inChans struct {
@@ -40,22 +49,28 @@ func StartMetronome(ctx actor.Ctx) Metronome {
 }
 
 type state struct {
-	ctx     actor.Ctx
-	inChans *inChans
-	joiners *list.List
+	ctx         actor.Ctx
+	initTime    time.Time
+	inChans     *inChans
+	joiners     *list.List
+	subscribers map[chan<- Tick]bool
 }
 
 func metronomeEnterLoop(ctx actor.Ctx, inChans *inChans) {
 	ctx.Log().Info("enter loop")
 	state := new(state)
 	state.ctx = ctx
+	state.initTime = time.Now()
 	state.inChans = inChans
 	state.joiners = list.New()
+	state.subscribers = make(map[chan<- Tick]bool)
 	state.loop()
 }
 
 func (this *state) loop() {
 	defer this.releaseJoiners()
+	ticker := time.NewTicker(time.Nanosecond * TickDurationNanos)
+
 	for {
 		select {
 		case join := <-this.inChans.join:
@@ -63,6 +78,9 @@ func (this *state) loop() {
 
 		case subs := <-this.inChans.subsMgmt:
 			this.handleSubsReq(subs)
+
+		case tick := <-ticker.C:
+			this.handleTick(tick)
 		}
 	}
 }
@@ -73,14 +91,27 @@ func (this *state) releaseJoiners() {
 	this.joiners = list.New()
 }
 
+func (this *state) handleTick(t time.Time) {
+	elapsed := t.Sub(this.initTime)
+	tickIdx := uint64(elapsed.Nanoseconds() / TickDurationNanos)
+	//this.ctx.Log().Debug("tick #%d", tickIdx)
+
+	tick := NewTick(tickIdx)
+	for k,_ := range this.subscribers {
+		k <- tick
+	}
+}
+
 func (this *state) handleSubsReq(subs subsReq) {
 	switch subs.(type) {
 	case *subsReqSubscribe:
 		this.ctx.Log().Debug("subscribe: %+v", subs.Chan())
+		this.subscribers[subs.Chan()] = true
 		subs.ReplyTo() <- true
 
 	case *subsReqUnsubscribe:
 		this.ctx.Log().Debug("unsubscribe: %+v", subs.Chan())
+		delete(this.subscribers, subs.Chan())
 		subs.ReplyTo() <- true
 
 	default:
