@@ -59,7 +59,7 @@ func (this *acceptorState) loop() {
 		if err != nil {
 			this.ctx.Log().Error("error on accept [%v]:  %v", idx, err)
 		} else {
-			this.ctx.Log().Debug("accepted: [%v] %v", idx, sock)
+			//this.ctx.Log().Debug("accepted: [%v] %v", idx, sock)
 			connection := StartConnection(
 				this.ctx.NewChild(fmt.Sprintf("conn-%v", idx)),
 				this.acceptorId, idx, sock, this.ringMgr, this.config, this.closedChan)

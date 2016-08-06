@@ -39,7 +39,7 @@ type connectionState struct {
 
 func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, config config.Config, closedChan chan<- *ClosedInfo) {
 	this.actorCtx = ctx
-	this.actorCtx.Log().Debug("init")
+	//this.actorCtx.Log().Debug("init")
 	this.config = config
 
 	this.readBuf = make([]byte, ReadBufSize)
@@ -94,7 +94,9 @@ func (this *connectionState) loop() {
 
 		cmdExecStart := time.Now()
 		if err != nil {
-			this.actorCtx.Log().Warning("error reading cmd: %v", err)
+			if err.Error() != "EOF" {
+				this.actorCtx.Log().Warning("error reading cmd: %v", err)
+			}
 			break
 		}
 		this.processRequest(cmd)
@@ -133,7 +135,7 @@ func (this *connectionState) processRequest(req *respvalues.RESPArray) {
 }
 
 func (this *connectionState) onClosed() {
-	this.actorCtx.Log().Debug("closed")
+	//this.actorCtx.Log().Debug("closed")
 	this.sock.Close()
 
 	closedInfo := new(ClosedInfo)
@@ -163,7 +165,7 @@ func StartConnection(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr rin
 }
 
 func connectionEnterLoop(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, config config.Config, closedChan chan<- *ClosedInfo) {
-	ctx.Log().Debug("entering loop...", aId, cId, sock)
+	//ctx.Log().Debug("entering loop...", aId, cId, sock)
 
 	state := new(connectionState)
 	state.init(ctx, aId, cId, sock, ringMgr, config, closedChan)

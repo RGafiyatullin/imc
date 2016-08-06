@@ -41,6 +41,7 @@ type ClosedInfo struct {
 
 type srvState struct {
 	actorCtx       actor.Ctx
+	connsCount     uint
 	ringMgr        ringmgr.RingMgr
 	config         config.Config
 	acceptorsCount int
@@ -96,6 +97,7 @@ func (this *srvState) init(
 	this.acceptorsCount = acceptorsCount
 	this.lSock = lSock
 	this.chans = chans
+	this.connsCount = 0
 	this.joiners = list.New()
 }
 
@@ -116,9 +118,11 @@ func (this *srvState) listenerLoop() {
 	for {
 		select {
 		case accepted := <-this.chans.acceptedChan:
-			this.actorCtx.Log().Debug("accepted %+v", *accepted)
+			this.connsCount++
+			this.actorCtx.Log().Debug("accepted %+v [%d]", *accepted, this.connsCount)
 		case closed := <-this.chans.closedChan:
-			this.actorCtx.Log().Debug("closed %+v", *closed)
+			this.connsCount--
+			this.actorCtx.Log().Debug("closed %+v [%d]", *closed, this.connsCount)
 		case join := <-this.chans.joinChan:
 			this.joiners.PushBack(join)
 		}
