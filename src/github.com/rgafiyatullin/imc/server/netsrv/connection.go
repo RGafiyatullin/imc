@@ -67,6 +67,7 @@ func (this *connectionState) InitCommandsFullSet() {
 	commands.NewGetHandler(this.actorCtx.NewChild("#GET"), this.ringMgr).Register(this.handlers)
 	commands.NewSetHandler(this.actorCtx.NewChild("#SET"), this.ringMgr).Register(this.handlers)
 	commands.NewDelHandler(this.actorCtx.NewChild("#DEL"), this.ringMgr).Register(this.handlers)
+	commands.NewKeysHandler(this.actorCtx.NewChild("#KEYS"), this.ringMgr).Register(this.handlers)
 	commands.NewLPshFHandler(this.actorCtx.NewChild("#LPSHF"), this.ringMgr).Register(this.handlers)
 	commands.NewLPshBHandler(this.actorCtx.NewChild("#LPSHB"), this.ringMgr).Register(this.handlers)
 	commands.NewLPopFHandler(this.actorCtx.NewChild("#LPOPF"), this.ringMgr).Register(this.handlers)

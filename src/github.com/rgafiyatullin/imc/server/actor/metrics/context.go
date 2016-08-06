@@ -15,6 +15,7 @@ type Ctx interface {
 	ReportCommandGetDuration(d time.Duration)
 	ReportCommandSetDuration(d time.Duration)
 	ReportCommandDelDuration(d time.Duration)
+	ReportCommandKeysDuration(d time.Duration)
 	ReportCommandLPshFDuration(d time.Duration)
 	ReportCommandLPshBDuration(d time.Duration)
 	ReportCommandLPopFDuration(d time.Duration)
@@ -61,12 +62,14 @@ type ctx struct {
 	command_duration_h metrics.Histogram
 	command_rate_m     metrics.Meter
 
-	command_get_duration_h metrics.Histogram
-	command_get_rate_m     metrics.Meter
-	command_set_duration_h metrics.Histogram
-	command_set_rate_m     metrics.Meter
-	command_del_duration_h metrics.Histogram
-	command_del_rate_m     metrics.Meter
+	command_get_duration_h  metrics.Histogram
+	command_get_rate_m      metrics.Meter
+	command_set_duration_h  metrics.Histogram
+	command_set_rate_m      metrics.Meter
+	command_del_duration_h  metrics.Histogram
+	command_del_rate_m      metrics.Meter
+	command_keys_duration_h metrics.Histogram
+	command_keys_rate_m     metrics.Meter
 
 	command_lpshf_duration_h   metrics.Histogram
 	command_lpshf_rate_m       metrics.Meter
@@ -123,6 +126,12 @@ func (this *ctx) ReportCommandDelDuration(d time.Duration) {
 	us := d.Nanoseconds() / 1000
 	this.command_del_rate_m.Mark(1)
 	this.command_del_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandKeysDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_keys_rate_m.Mark(1)
+	this.command_keys_duration_h.Update(us)
 }
 
 func (this *ctx) ReportCommandLGetNthDuration(d time.Duration) {
@@ -286,6 +295,9 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.command_del_duration_h = metrics.NewHistogram(sample)
 	this.command_del_rate_m = metrics.NewMeter()
 
+	this.command_keys_duration_h = metrics.NewHistogram(sample)
+	this.command_keys_rate_m = metrics.NewMeter()
+
 	this.command_lpshf_duration_h = metrics.NewHistogram(sample)
 	this.command_lpshf_rate_m = metrics.NewMeter()
 
@@ -353,6 +365,9 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	metrics.DefaultRegistry.Register("netsrv.commands.del.duration.h", this.command_del_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.commands.del.rate.m", this.command_del_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.keys.duration.h", this.command_keys_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.keys.rate.m", this.command_keys_rate_m)
 
 	metrics.DefaultRegistry.Register("netsrv.commands.lpshf.duration.h", this.command_lpshf_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.commands.lpshf.rate.m", this.command_lpshf_rate_m)

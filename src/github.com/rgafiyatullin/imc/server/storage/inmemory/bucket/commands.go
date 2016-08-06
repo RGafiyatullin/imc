@@ -4,6 +4,7 @@ const cmdSet = 1
 const cmdGet = 2
 const cmdExists = 3
 const cmdDel = 4
+const cmdKeys = 17
 
 const cmdLPushBack = 5
 const cmdLPushFront = 6
@@ -40,6 +41,12 @@ func NewCmdSet(key string, value []byte) Cmd {
 func NewCmdDel(key string) Cmd {
 	cmd := new(CmdDel)
 	cmd.key = key
+	return cmd
+}
+
+func NewCmdKeys(pattern string) Cmd {
+	cmd := new(CmdKeys)
+	cmd.pattern = pattern
 	return cmd
 }
 
@@ -156,6 +163,14 @@ type CmdDel struct {
 func (this *CmdDel) CmdId() int {
 	return cmdDel
 }
+
+type CmdKeys struct {
+	pattern string
+}
+func (this *CmdKeys) CmdId() int {
+	return cmdKeys
+}
+
 
 type CmdLPushBack struct {
 	key   string

@@ -9,6 +9,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
 	"time"
+	"github.com/steveyen/gtreap"
 )
 
 type storage struct {
@@ -37,6 +38,8 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 		return this.handleCommandExists(cmd.(*CmdExists))
 	case cmdDel:
 		return this.handleCommandDel(cmd.(*CmdDel))
+	case cmdKeys:
+		return this.handleCommandKeys(cmd.(*CmdKeys))
 	case cmdLPushBack:
 		return this.handleCommandLPushBack(cmd.(*CmdLPushBack))
 	case cmdLPushFront:
@@ -69,7 +72,7 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 func (this *storage) ReportStats() {
 	ttlSize := this.ttl.Size()
 	kvSize := this.kv.Size()
-	
+
 	this.actorCtx.Metrics().ReportStorageTTLSize(ttlSize)
 	this.actorCtx.Metrics().ReportStorageKVSize(kvSize)
 }
@@ -101,14 +104,14 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.RESPValue, error)
 		return respvalues.NewNil(), nil
 	}
 
-	validThru := kve.validThru()
+	validThru := kve.ValidThru()
 	if validThru != ValidThruInfinity && validThru < this.tickIdx {
 		this.kv.Del(cmd.key)
 		this.ttl.SetTTL(cmd.key, ValidThruInfinity)
 		return respvalues.NewNil(), nil
 	}
 
-	return kve.value().ToRESP(), nil
+	return kve.Value().ToRESP(), nil
 }
 
 func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.RESPValue, error) {
@@ -128,7 +131,7 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.RESPValue, error)
 	this.ttl.SetTTL(cmd.key, int64(ValidThruInfinity))
 
 	affectedRecords := int64(0)
-	validThru := kve.validThru()
+	validThru := kve.ValidThru()
 	if validThru == ValidThruInfinity || existed && validThru >= this.tickIdx {
 		affectedRecords = 1
 	}
@@ -147,9 +150,9 @@ func (this *storage) handleCommandLPushFront(cmd *CmdLPushFront) (respvalues.RES
 func (this *storage) handleCommandLPushCommon(key string, value []byte, front bool) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(key)
 	if found {
-		switch kve.value().(type) {
+		switch kve.Value().(type) {
 		case (*data.ListValue):
-			l := kve.value().(*data.ListValue)
+			l := kve.Value().(*data.ListValue)
 			newlen := 0
 			if front {
 				newlen = l.PushFront(value)
@@ -189,9 +192,9 @@ func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues
 		return respvalues.NewNil(), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.ListValue):
-		l := kve.value().(*data.ListValue)
+		l := kve.Value().(*data.ListValue)
 		var value []byte = nil
 		isEmpty := false
 		if front {
@@ -215,9 +218,9 @@ func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.RESPValue
 		return respvalues.NewNil(), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.ListValue):
-		l := kve.value().(*data.ListValue)
+		l := kve.Value().(*data.ListValue)
 		value, found := l.Nth(cmd.idx)
 
 		if !found {
@@ -236,7 +239,7 @@ func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.RESPValue, error)
 	if !found {
 		return respvalues.NewInt(-2), nil
 	}
-	validThru := kve.validThru()
+	validThru := kve.ValidThru()
 
 	if validThru == ValidThruInfinity {
 		return respvalues.NewInt(ValidThruInfinity), nil
@@ -267,7 +270,7 @@ func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.RESPValue, 
 		validThru = this.tickIdx + expiryTicks
 	}
 
-	this.kv.Set(cmd.key, kve.value(), validThru)
+	this.kv.Set(cmd.key, kve.Value(), validThru)
 	this.ttl.SetTTL(cmd.key, validThru)
 
 	return respvalues.NewInt(1), nil
@@ -283,9 +286,9 @@ func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.RESPValue, erro
 		return respvalues.NewInt(1), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.DictValue):
-		dict := kve.value().(*data.DictValue)
+		dict := kve.Value().(*data.DictValue)
 		keyCreated := dict.Set(cmd.hkey, cmd.hvalue)
 		if keyCreated {
 			return respvalues.NewInt(1), nil
@@ -304,9 +307,9 @@ func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.RESPValue, erro
 		return respvalues.NewNil(), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.DictValue):
-		dict := kve.value().(*data.DictValue)
+		dict := kve.Value().(*data.DictValue)
 		hvalue, hfound := dict.Get(cmd.hkey)
 		if !hfound {
 			return respvalues.NewNil(), nil
@@ -326,9 +329,9 @@ func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.RESPValue, erro
 		return respvalues.NewInt(0), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.DictValue):
-		dict := kve.value().(*data.DictValue)
+		dict := kve.Value().(*data.DictValue)
 		hexisted, hempty := dict.Del(cmd.hkey)
 
 		if hempty {
@@ -353,9 +356,9 @@ func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.RESPValue, er
 		return respvalues.NewNil(), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.DictValue):
-		dict := kve.value().(*data.DictValue)
+		dict := kve.Value().(*data.DictValue)
 		hkeys := dict.Keys()
 		hkeysAsResp := list.New()
 		for i := 0; i < len(hkeys); i++ {
@@ -376,9 +379,9 @@ func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.RESPValue
 		return respvalues.NewNil(), nil
 	}
 
-	switch kve.value().(type) {
+	switch kve.Value().(type) {
 	case (*data.DictValue):
-		dict := kve.value().(*data.DictValue)
+		dict := kve.Value().(*data.DictValue)
 		hvalues := dict.Values()
 		hvaluesAsResp := list.New()
 		for i := 0; i < len(hvalues); i++ {
@@ -391,3 +394,17 @@ func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.RESPValue
 		return respvalues.NewErr("HGETALL: incompatible existing value for this operation"), nil
 	}
 }
+
+func (this *storage) handleCommandKeys(cmd *CmdKeys) (respvalues.RESPValue, error) {
+	result := list.New()
+
+	keys := this.kv.Keys()
+
+	filterKeys(cmd.pattern, keys, result)
+
+	return respvalues.NewArray(result), nil
+}
+func filterKeys(pattern string, allKeys *gtreap.Treap, resultKeys *list.List) {
+	
+}
+

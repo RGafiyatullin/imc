@@ -11,8 +11,11 @@ package bucket
 // In order to scale out -- use multiple collections as shards over the keyspace.
 
 import (
+	"bytes"
 	"container/list"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
+	"github.com/steveyen/gtreap"
+	"math/rand"
 )
 
 const ValidThruInfinity = -1 // A special value signalling infinite TTL
@@ -27,11 +30,13 @@ type KV interface {
 	Del(key string)
 
 	Size() int
+
+	Keys() *gtreap.Treap
 }
 
 type KVEntry interface {
-	validThru() int64
-	value() data.Value
+	ValidThru() int64
+	Value() data.Value
 }
 
 type TTL interface {
@@ -43,39 +48,49 @@ type TTL interface {
 // KVEntry implementation
 
 type kventry struct {
-	validThru_ int64
-	value_     data.Value
+	validThru int64
+	value     data.Value
 }
 
 func NewKVEntry(value data.Value, validThru int64) KVEntry {
 	entry := new(kventry)
-	entry.value_ = value
-	entry.validThru_ = validThru
+	entry.value = value
+	entry.validThru = validThru
 	return entry
 }
 
-func (this *kventry) validThru() int64 {
-	return this.validThru_
+func (this *kventry) ValidThru() int64 {
+	return this.validThru
 }
 
-func (this *kventry) value() data.Value {
-	return this.value_
+func (this *kventry) Value() data.Value {
+	return this.value
 }
 
-// KV implementation
+// KV implementation: native map
+
+func kvTreapStrOrdering(a, b interface{}) int {
+	return bytes.Compare([]byte(a.(string)), []byte(b.(string)))
+}
 
 type kv struct {
 	storage map[string]KVEntry
+	keys    *gtreap.Treap
 }
 
 func NewKV() KV {
 	kv := new(kv)
 	kv.storage = make(map[string]KVEntry)
+	kv.keys = gtreap.NewTreap(kvTreapStrOrdering)
 	return kv
 }
 
 func (this *kv) Size() int {
 	return len(this.storage)
+}
+
+func (this *kv) Keys() *gtreap.Treap {
+	return this.keys
 }
 
 func (this *kv) Get(k string) (KVEntry, bool) {
@@ -86,10 +101,12 @@ func (this *kv) Get(k string) (KVEntry, bool) {
 func (this *kv) Set(key string, value data.Value, validThru int64) {
 	entry := NewKVEntry(value, validThru)
 	this.storage[key] = entry
+	this.keys = this.keys.Upsert(key, rand.Int())
 }
 
 func (this *kv) Del(key string) {
 	delete(this.storage, key)
+	this.keys = this.keys.Delete(key)
 }
 
 // TTL implementation
