@@ -167,10 +167,10 @@ func (this *CmdDel) CmdId() int {
 type CmdKeys struct {
 	pattern string
 }
+
 func (this *CmdKeys) CmdId() int {
 	return cmdKeys
 }
-
 
 type CmdLPushBack struct {
 	key   string

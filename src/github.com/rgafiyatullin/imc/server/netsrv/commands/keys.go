@@ -1,12 +1,12 @@
 package commands
 
 import (
+	"container/list"
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 	"time"
-	"container/list"
 )
 
 type KeysHandler struct {
