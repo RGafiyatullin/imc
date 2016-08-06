@@ -29,11 +29,14 @@ type Ctx interface {
 	ReportCommandAuthDuration(d time.Duration)
 	ReportCommandAuthSuccess()
 	ReportCommandAuthFailure()
+	ReportConnCount(c int)
 }
 
 type ctx struct {
 	log    logging.Ctx
 	config config.Config
+
+	conn_count_g metrics.Gauge
 
 	command_duration_h metrics.Histogram
 	command_rate_m     metrics.Meter
@@ -186,6 +189,10 @@ func (this *ctx) ReportCommandAuthSuccess() {
 	this.command_auth_success_m.Mark(1)
 }
 
+func (this *ctx) ReportConnCount(c int) {
+	this.conn_count_g.Update(int64(c))
+}
+
 func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log = log
 	this.config = config
@@ -194,6 +201,8 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	sampleSize := 1028
 	alpha := 0.015
+
+	this.conn_count_g = metrics.NewGauge()
 
 	this.command_duration_h = metrics.NewHistogram(
 		metrics.NewExpDecaySample(sampleSize, alpha))
@@ -264,6 +273,8 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.command_auth_rate_m = metrics.NewMeter()
 	this.command_auth_success_m = metrics.NewMeter()
 	this.command_auth_failure_m = metrics.NewMeter()
+
+	metrics.DefaultRegistry.Register("netsrv.conn_count.g", this.conn_count_g)
 
 	metrics.DefaultRegistry.Register("netsrv.command.duration.h", this.command_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.command.rate.m", this.command_rate_m)

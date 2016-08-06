@@ -8,6 +8,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 	"net"
+	"time"
 )
 
 type listenerChannels struct {
@@ -41,7 +42,7 @@ type ClosedInfo struct {
 
 type srvState struct {
 	actorCtx       actor.Ctx
-	connsCount     uint
+	connsCount     int
 	ringMgr        ringmgr.RingMgr
 	config         config.Config
 	acceptorsCount int
@@ -115,14 +116,19 @@ func (this *srvState) startAcceptor(idx int) {
 
 func (this *srvState) listenerLoop() {
 	defer this.releaseJoiners()
+	metricsTicker := time.NewTicker(time.Second)
 	for {
 		select {
-		case accepted := <-this.chans.acceptedChan:
+		case <-this.chans.acceptedChan:
 			this.connsCount++
-			this.actorCtx.Log().Debug("accepted %+v [%d]", *accepted, this.connsCount)
-		case closed := <-this.chans.closedChan:
+
+		case <-this.chans.closedChan:
 			this.connsCount--
-			this.actorCtx.Log().Debug("closed %+v [%d]", *closed, this.connsCount)
+
+		case <-metricsTicker.C:
+			//this.actorCtx.Log().Debug("ConnsCount: %d", this.connsCount)
+			this.actorCtx.Metrics().ReportConnCount(this.connsCount)
+
 		case join := <-this.chans.joinChan:
 			this.joiners.PushBack(join)
 		}
