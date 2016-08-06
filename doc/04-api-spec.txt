@@ -1,0 +1,144 @@
+
+AUTH password
+    Authenticate to the server.
+    The correct password for the server is specified via IMCD_PASSWORD env-variable.
+
+    Ret-value:
+        * Int(0) -- failure;
+        * Int(1) -- success.
+
+DEL key1 [key2 ...]
+    Delete a key/keys.
+
+    Ret-value:
+        * Int(affected-rows).
+
+EXPIRE key seconds
+    Set a key's time to live in seconds.
+
+    Ret-value:
+        * Int(1) -- key exists;
+        * Int(0) -- key doesn't exist.
+
+PEXPIRE key milliseconds
+    Set a key's time to live in milliseconds.
+
+    Ret-value:
+        * Int(1) -- key exists;
+        * Int(0) -- key doesn't exist.
+
+PERSIST key
+    Remove the expiration from a key
+
+    Ret-value:
+        * Int(1) -- key exists;
+        * Int(0) -- key doesn't exist.
+
+GET key
+    Get the value of a key
+
+    Ret-value:
+        * BulkStr(existent-value) -- key exists;
+        * Nil() -- key doesn't exist.
+
+HDEL key field
+    Delete a field of the hash table
+
+    Ret-value:
+        * Int(1) -- key exists and is a hashtable, field exists;
+        * Int(0) -- key/field doesn't exist;
+
+HGETALL key
+    Get all the fields and values in a hash
+
+    Ret-value:
+        * Nil() -- key doesn't exist
+        * Arr(BulkStr(value), ...) -- key exists and is a hashtable
+
+HKEYS key
+    Get all the fields in a hash
+
+    Ret-value:
+        * Nil() -- key doesn't exist
+        * Arr(Str(key), ...) -- key exists and is a hashtable
+
+HSET key field value
+    Set the string value of a hash field
+
+    Ret-value:
+        * Int(1) -- new field created
+        * Int(0) -- existing field updated
+
+KEYS pattern
+    Find all keys matching the given pattern.
+    Pattern is a PCRE.
+
+    Ret-value:
+        * Nil() -- no keys match;
+        * Arr(Str(key), ...) -- some keys match.
+
+LPOPB key
+    Pop the value from the back of the list.
+
+    Ret-value:
+        * Nil() -- key does not exist;
+        * BulkStr(value) -- key exists and is a list.
+
+LPOPF key
+    Pop the value from the front of the list.
+
+    Ret-value:
+        * Nil() -- key does not exist;
+        * BulkStr(value) -- key exists and is a list.
+
+LPSHB key value
+    Push the value into the front of the list.
+
+    Ret-value:
+        * Int(size).
+
+LPSHF key value
+    Push the value into the back of the list.
+
+    Ret-value:
+        * Int(size).
+
+LNTH key idx
+    Get the value of the idx-th element of the list.
+
+    Ret-value:
+        * Int(size).
+
+LLEN key
+    Get the size of the list.
+
+    Ret-value:
+        * Int(size).
+
+PING
+    Ping the server.
+
+    Ret-value:
+        * Str("PONG").
+
+SET key value
+    Set the string value of a key.
+
+    Ret-value:
+        * Str("OK").
+
+TTL key
+    Get the time to live for a key.
+
+    Ret-value:
+        * Int(-2) -- key does not exist;
+        * Int(-1) -- key exists; no TTL set;
+        * Int(seconds) -- key exists; TTL is set.
+
+PTTL key
+    Get the time to live for a key in milliseconds.
+
+    Ret-value:
+            * Int(-2) -- key does not exist;
+            * Int(-1) -- key exists; no TTL set;
+            * Int(milliseconds) -- key exists; TTL is set.
