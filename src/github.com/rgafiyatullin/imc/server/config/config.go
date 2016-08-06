@@ -16,6 +16,7 @@ func New() Config {
 	config.storageConfig = storageConfig
 	config.metricsConfig = metricsConfig
 	config.ResetToDefaults()
+	config.ReadFromOSEnv()
 	return config
 }
 
@@ -28,7 +29,15 @@ type config struct {
 func (this *config) Net() NetConfig         { return this.netConfig }
 func (this *config) Storage() StorageConfig { return this.storageConfig }
 func (this *config) Metrics() MetricsConfig { return this.metricsConfig }
+
 func (this *config) ResetToDefaults() {
 	this.netConfig.ResetToDefaults()
 	this.storageConfig.ResetToDefaults()
+	this.metricsConfig.ResetToDefaults()
+}
+
+func (this *config) ReadFromOSEnv() {
+	this.netConfig.ReadFromOSEnv()
+	this.storageConfig.ReadFromOSEnv()
+	this.metricsConfig.ReadFromOSEnv()
 }

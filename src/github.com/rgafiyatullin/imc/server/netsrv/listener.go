@@ -50,7 +50,10 @@ type srvState struct {
 func StartListener(ctx actor.Ctx, config config.Config, ringMgr ringmgr.RingMgr) (Listener, error) {
 	lSock, listenErr := net.Listen("tcp", config.Net().BindSpec())
 	if listenErr != nil {
+		ctx.Log().Error("Failed to bind '%s': %v", config.Net().BindSpec(), listenErr)
 		return nil, listenErr
+	} else {
+		ctx.Log().Info("Bound '%s'", config.Net().BindSpec())
 	}
 
 	srv := new(listener)

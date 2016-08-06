@@ -1,13 +1,13 @@
 package bucket
 
 import (
+	"container/list"
 	"errors"
 	"fmt"
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
-	"container/list"
 )
 
 type storage struct {
@@ -282,7 +282,9 @@ func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.BasicType, erro
 func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, error) {
 	kve, found := this.kv.Get(cmd.key)
 
-	if !found { return respvalues.NewNil(), nil }
+	if !found {
+		return respvalues.NewNil(), nil
+	}
 
 	switch kve.value().(type) {
 	case (*data.DictValue):
@@ -302,7 +304,9 @@ func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, erro
 func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.BasicType, error) {
 	kve, found := this.kv.Get(cmd.key)
 
-	if !found { return respvalues.NewInt(0), nil }
+	if !found {
+		return respvalues.NewInt(0), nil
+	}
 
 	switch kve.value().(type) {
 	case (*data.DictValue):
