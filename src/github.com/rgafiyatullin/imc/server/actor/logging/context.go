@@ -13,7 +13,7 @@ type Ctx interface {
 	// Blocks until the previously (in terms of the current execution context) emitted log-messages are actually logged.
 	// May be useful in case of logging fatal messages prior to requesting system halt.
 	Flush()
-	
+
 	Debug(fmtStr string, args ...interface{})
 	Info(fmtStr string, args ...interface{})
 	Warning(fmtStr string, args ...interface{})
@@ -69,7 +69,6 @@ func (this *ctx) Fatal(fmtStr string, args ...interface{}) {
 	this.message(lvlFatal, fmtStr, args)
 	this.Flush()
 }
-
 
 func (this *ctx) Flush() {
 	this.handler_.Flush()

@@ -26,6 +26,9 @@ type Ctx interface {
 	ReportCommandHDelDuration(d time.Duration)
 	ReportCommandHKeysDuration(d time.Duration)
 	ReportCommandHGetAllDuration(d time.Duration)
+	ReportCommandAuthDuration(d time.Duration)
+	ReportCommandAuthSuccess()
+	ReportCommandAuthFailure()
 }
 
 type ctx struct {
@@ -68,6 +71,11 @@ type ctx struct {
 	command_hkeys_rate_m       metrics.Meter
 	command_hgetall_duration_h metrics.Histogram
 	command_hgetall_rate_m     metrics.Meter
+
+	command_auth_duration_h metrics.Histogram
+	command_auth_rate_m     metrics.Meter
+	command_auth_success_m  metrics.Meter
+	command_auth_failure_m  metrics.Meter
 }
 
 func (this *ctx) ReportCommandDuration(d time.Duration) {
@@ -165,6 +173,19 @@ func (this *ctx) ReportCommandHGetAllDuration(d time.Duration) {
 	this.command_hgetall_duration_h.Update(us)
 }
 
+func (this *ctx) ReportCommandAuthDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_auth_rate_m.Mark(1)
+	this.command_auth_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandAuthFailure() {
+	this.command_auth_failure_m.Mark(1)
+}
+func (this *ctx) ReportCommandAuthSuccess() {
+	this.command_auth_success_m.Mark(1)
+}
+
 func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log = log
 	this.config = config
@@ -238,6 +259,12 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 		metrics.NewExpDecaySample(sampleSize, alpha))
 	this.command_hgetall_rate_m = metrics.NewMeter()
 
+	this.command_auth_duration_h = metrics.NewHistogram(
+		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_auth_rate_m = metrics.NewMeter()
+	this.command_auth_success_m = metrics.NewMeter()
+	this.command_auth_failure_m = metrics.NewMeter()
+
 	metrics.DefaultRegistry.Register("netsrv.command.duration.h", this.command_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.command.rate.m", this.command_rate_m)
 
@@ -285,6 +312,11 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	metrics.DefaultRegistry.Register("netsrv.commands.hgetall.duration.h", this.command_hgetall_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.commands.hgetall.rate.m", this.command_hgetall_rate_m)
+
+	metrics.DefaultRegistry.Register("netsrv.commands.auth.duration.h", this.command_auth_duration_h)
+	metrics.DefaultRegistry.Register("netsrv.commands.auth.rate.m", this.command_auth_rate_m)
+	metrics.DefaultRegistry.Register("netsrv.commands.auth.success_rate.m", this.command_auth_success_m)
+	metrics.DefaultRegistry.Register("netsrv.commands.auth.failure_rate.m", this.command_auth_failure_m)
 }
 
 func (this *ctx) startGraphiteReporter() {

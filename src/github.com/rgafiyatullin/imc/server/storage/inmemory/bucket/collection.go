@@ -10,7 +10,6 @@ package bucket
 // The collections are not meant to be thread-safe: they are supposed to be accessed sequentially.
 // In order to scale out -- use multiple collections as shards over the keyspace.
 
-
 import (
 	"container/list"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"

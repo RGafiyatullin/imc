@@ -42,6 +42,7 @@ type ClosedInfo struct {
 type srvState struct {
 	actorCtx       actor.Ctx
 	ringMgr        ringmgr.RingMgr
+	config         config.Config
 	acceptorsCount int
 	lSock          net.Listener
 	chans          *listenerChannels
@@ -70,21 +71,28 @@ func StartListener(ctx actor.Ctx, config config.Config, ringMgr ringmgr.RingMgr)
 	srv.chans.closedChan = make(chan *ClosedInfo)
 	srv.chans.joinChan = join.NewServerChan()
 
-	go listenerEnterLoop(ctx, lSock, srv.chans, ringMgr)
+	go listenerEnterLoop(ctx, lSock, srv.chans, ringMgr, config)
 
 	return srv, nil
 }
 
-func listenerEnterLoop(actorCtx actor.Ctx, lSock net.Listener, chans *listenerChannels, ringMgr ringmgr.RingMgr) {
+func listenerEnterLoop(
+	actorCtx actor.Ctx, lSock net.Listener, chans *listenerChannels,
+	ringMgr ringmgr.RingMgr, config config.Config) {
+
 	state := new(srvState)
-	state.init(actorCtx, 10, lSock, chans, ringMgr)
+	state.init(actorCtx, 10, lSock, chans, ringMgr, config)
 	state.startAcceptors()
 	state.listenerLoop()
 }
 
-func (this *srvState) init(actorCtx actor.Ctx, acceptorsCount int, lSock net.Listener, chans *listenerChannels, ringMgr ringmgr.RingMgr) {
+func (this *srvState) init(
+	actorCtx actor.Ctx, acceptorsCount int, lSock net.Listener, chans *listenerChannels,
+	ringMgr ringmgr.RingMgr, config config.Config) {
+
 	this.actorCtx = actorCtx
 	this.ringMgr = ringMgr
+	this.config = config
 	this.acceptorsCount = acceptorsCount
 	this.lSock = lSock
 	this.chans = chans
@@ -100,7 +108,7 @@ func (this *srvState) startAcceptors() {
 func (this *srvState) startAcceptor(idx int) {
 	this.actorCtx.Log().Debug("Starting acceptor #%v", idx)
 	childCtx := this.actorCtx.NewChild(fmt.Sprintf("acceptor-%v", idx))
-	StartAcceptor(childCtx, idx, this.lSock, this.ringMgr, this.chans.acceptedChan, this.chans.closedChan)
+	StartAcceptor(childCtx, idx, this.lSock, this.ringMgr, this.config, this.chans.acceptedChan, this.chans.closedChan)
 }
 
 func (this *srvState) listenerLoop() {

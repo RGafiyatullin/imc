@@ -5,6 +5,7 @@ import (
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/protocol/resp/server"
 	"github.com/rgafiyatullin/imc/server/actor"
+	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/netsrv/commands"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 	"net"
@@ -25,6 +26,7 @@ type connection struct {
 
 type connectionState struct {
 	actorCtx   actor.Ctx
+	config     config.Config
 	readBuf    []byte
 	protocol   server.Context
 	sock       net.Conn
@@ -35,9 +37,10 @@ type connectionState struct {
 	handlers   map[string]commands.CommandHandler
 }
 
-func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, closedChan chan<- *ClosedInfo) {
+func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, config config.Config, closedChan chan<- *ClosedInfo) {
 	this.actorCtx = ctx
 	this.actorCtx.Log().Debug("init")
+	this.config = config
 
 	this.readBuf = make([]byte, ReadBufSize)
 	this.sock = sock
@@ -47,10 +50,18 @@ func (this *connectionState) init(ctx actor.Ctx, aId int, cId int, sock net.Conn
 	this.closedChan = closedChan
 	this.protocol = server.New(sock)
 
-	this.initCommands()
+	this.InitCommands()
 }
 
-func (this *connectionState) initCommands() {
+func (this *connectionState) InitCommands() {
+	if this.config.Net().Password() == "" {
+		this.InitCommandsFullSet()
+	} else {
+		this.InitCommandsUnauthed()
+	}
+}
+
+func (this *connectionState) InitCommandsFullSet() {
 	this.handlers = make(map[string]commands.CommandHandler)
 	commands.NewPingHandler(this.actorCtx.NewChild("#PING")).Register(this.handlers)
 	commands.NewGetHandler(this.actorCtx.NewChild("#GET"), this.ringMgr).Register(this.handlers)
@@ -68,7 +79,11 @@ func (this *connectionState) initCommands() {
 	commands.NewHDelHandler(this.actorCtx.NewChild("#HDEL"), this.ringMgr).Register(this.handlers)
 	commands.NewHKeysHandler(this.actorCtx.NewChild("#HKEYS"), this.ringMgr).Register(this.handlers)
 	commands.NewHGetAllHandler(this.actorCtx.NewChild("#HGETALL"), this.ringMgr).Register(this.handlers)
+}
 
+func (this *connectionState) InitCommandsUnauthed() {
+	this.handlers = make(map[string]commands.CommandHandler)
+	commands.NewAuthHandler(this.actorCtx.NewChild("#AUTH"), this.config.Net().Password(), this).Register(this.handlers)
 }
 
 func (this *connectionState) loop() {
@@ -138,19 +153,19 @@ func (this *connection) connectionId() int {
 	return this.cId_
 }
 
-func StartConnection(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, closedChan chan<- *ClosedInfo) Connection {
+func StartConnection(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, config config.Config, closedChan chan<- *ClosedInfo) Connection {
 	conn := new(connection)
 	conn.aId_ = aId
 	conn.cId_ = cId
 
-	go connectionEnterLoop(ctx, aId, cId, sock, ringMgr, closedChan)
+	go connectionEnterLoop(ctx, aId, cId, sock, ringMgr, config, closedChan)
 	return conn
 }
 
-func connectionEnterLoop(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, closedChan chan<- *ClosedInfo) {
+func connectionEnterLoop(ctx actor.Ctx, aId int, cId int, sock net.Conn, ringMgr ringmgr.RingMgr, config config.Config, closedChan chan<- *ClosedInfo) {
 	ctx.Log().Debug("entering loop...", aId, cId, sock)
 
 	state := new(connectionState)
-	state.init(ctx, aId, cId, sock, ringMgr, closedChan)
+	state.init(ctx, aId, cId, sock, ringMgr, config, closedChan)
 	state.loop()
 }

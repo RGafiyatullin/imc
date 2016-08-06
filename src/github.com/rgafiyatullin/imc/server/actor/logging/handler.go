@@ -7,7 +7,7 @@ import (
 
 const ChanBufSize = 64
 
-type LogRequest interface {}
+type LogRequest interface{}
 
 type LogReport struct {
 	at     time.Time
@@ -18,7 +18,7 @@ type LogReport struct {
 }
 
 type FlushMsg struct {
-	ackTo chan<-bool
+	ackTo chan<- bool
 }
 
 type Handler interface {
@@ -38,7 +38,7 @@ func (this *handler) Flush() {
 	req := new(FlushMsg)
 	req.ackTo = ch
 	this.ch <- req
-	<- ch
+	<-ch
 }
 
 func NewHandler() Handler {

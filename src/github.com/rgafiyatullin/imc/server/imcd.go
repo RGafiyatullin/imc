@@ -1,13 +1,13 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 	"github.com/rgafiyatullin/imc/server/actor"
+	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/netsrv"
 	"github.com/rgafiyatullin/imc/server/storage"
-	"container/list"
-	"github.com/rgafiyatullin/imc/server/actor/join"
 )
 
 func main() {

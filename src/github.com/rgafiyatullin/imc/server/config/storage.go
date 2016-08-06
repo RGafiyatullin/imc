@@ -1,9 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
-	"fmt"
 )
 
 const StorageRingSizeDefault = 32
