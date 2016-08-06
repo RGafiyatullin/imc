@@ -1,13 +1,23 @@
 package data
 
-import "github.com/rgafiyatullin/imc/protocol/resp/respvalues"
+import (
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
+	"container/list"
+)
 
 type DictValue struct {
 	elements map[string]*ScalarValue
 }
 
 func (this *DictValue) ToRESP() respvalues.RESPValue {
-	return respvalues.NewErr("Cannot represent the whole Dict in terms of RESP")
+	tuples := list.New()
+	for k, v := range this.elements {
+		tuple := list.New()
+		tuple.PushBack(respvalues.NewStr(k))
+		tuple.PushBack(v.ToRESP())
+		tuples.PushBack(respvalues.NewArray(tuple))
+	}
+	return respvalues.NewArray(tuples)
 }
 
 func NewDict() *DictValue {
