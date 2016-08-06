@@ -2,24 +2,25 @@ package main
 
 import (
 	"container/list"
-	"fmt"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/netsrv"
 	"github.com/rgafiyatullin/imc/server/storage"
+	"runtime"
 )
 
 func main() {
-	fmt.Println("Helloes! I'm the IMC daemon")
-
 	awaitList := list.New()
 	defer awaitBeforeExit(awaitList)
 
 	config := config.New()
 
 	topActorCtx := actor.New(config)
-	topActorCtx.Log().Info("starting up")
+	logctx := topActorCtx.Log()
+	logctx.Info("imcd: starting up")
+	logctx.Info("runtime.NumCPU: %v", runtime.NumCPU())
+	logctx.Info("runtime.GOMAXPROCS: %v", runtime.GOMAXPROCS(0))
 
 	storageSup := storage.StartSup(topActorCtx.NewChild("storage_sup"), config)
 	awaitList.PushBack(storageSup.Join())

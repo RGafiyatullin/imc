@@ -8,6 +8,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
+	"time"
 )
 
 type storage struct {
@@ -65,15 +66,32 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 	}
 }
 
+func (this *storage) ReportStats() {
+	ttlSize := this.ttl.Size()
+	kvSize := this.kv.Size()
+	
+	this.actorCtx.Metrics().ReportStorageTTLSize(ttlSize)
+	this.actorCtx.Metrics().ReportStorageKVSize(kvSize)
+}
+
 func (this *storage) PurgeTimedOut() {
+	purgedCount := 0
+	start := time.Now()
 	for {
 		key, exists := this.ttl.FetchTimedOut(this.tickIdx)
 		if !exists {
 			break
 		}
 
-		this.actorCtx.Log().Debug("purging timed out key '%s'", key)
+		//this.actorCtx.Log().Debug("purging timed out key '%s'", key)
 		this.kv.Del(key)
+		purgedCount++
+	}
+	if purgedCount > 0 {
+		elapsed := time.Since(start)
+		//this.actorCtx.Log().Debug("PURGE [bucket: %d; count: %d; elapsed: %v]", this, purgedCount, elapsed)
+		this.actorCtx.Metrics().ReportStorageCleanupRecordsCount(purgedCount)
+		this.actorCtx.Metrics().ReportStorageCleanupDuration(elapsed)
 	}
 }
 

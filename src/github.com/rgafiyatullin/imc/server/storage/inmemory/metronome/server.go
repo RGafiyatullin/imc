@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const TickDurationNanos = 10 * 1000 * 1000 // 10ms tick
+const TickDurationNanos = 25 * 1000 * 1000 // 25ms tick
 
 type Tick interface {
 	CurrentTickIdx() int64
@@ -94,7 +94,6 @@ func (this *state) releaseJoiners() {
 func (this *state) handleTick(t time.Time) {
 	elapsed := t.Sub(this.initTime)
 	tickIdx := int64(elapsed.Nanoseconds() / TickDurationNanos)
-	//this.ctx.Log().Debug("tick #%d", tickIdx)
 
 	tick := NewTick(tickIdx)
 	for k, _ := range this.subscribers {

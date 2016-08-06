@@ -41,14 +41,13 @@ type ClosedInfo struct {
 }
 
 type srvState struct {
-	actorCtx       actor.Ctx
-	connsCount     int
-	ringMgr        ringmgr.RingMgr
-	config         config.Config
-	acceptorsCount int
-	lSock          net.Listener
-	chans          *listenerChannels
-	joiners        *list.List
+	actorCtx   actor.Ctx
+	connsCount int
+	ringMgr    ringmgr.RingMgr
+	config     config.Config
+	lSock      net.Listener
+	chans      *listenerChannels
+	joiners    *list.List
 }
 
 // Start a new Listener actor.
@@ -83,19 +82,18 @@ func listenerEnterLoop(
 	ringMgr ringmgr.RingMgr, config config.Config) {
 
 	state := new(srvState)
-	state.init(actorCtx, 10, lSock, chans, ringMgr, config)
+	state.init(actorCtx, lSock, chans, ringMgr, config)
 	state.startAcceptors()
 	state.listenerLoop()
 }
 
 func (this *srvState) init(
-	actorCtx actor.Ctx, acceptorsCount int, lSock net.Listener, chans *listenerChannels,
+	actorCtx actor.Ctx, lSock net.Listener, chans *listenerChannels,
 	ringMgr ringmgr.RingMgr, config config.Config) {
 
 	this.actorCtx = actorCtx
 	this.ringMgr = ringMgr
 	this.config = config
-	this.acceptorsCount = acceptorsCount
 	this.lSock = lSock
 	this.chans = chans
 	this.connsCount = 0
@@ -103,7 +101,7 @@ func (this *srvState) init(
 }
 
 func (this *srvState) startAcceptors() {
-	for idx := 0; idx < this.acceptorsCount; idx++ {
+	for idx := 0; idx < this.config.Net().AcceptorsCount(); idx++ {
 		this.startAcceptor(idx)
 	}
 }
@@ -121,9 +119,11 @@ func (this *srvState) listenerLoop() {
 		select {
 		case <-this.chans.acceptedChan:
 			this.connsCount++
+			this.actorCtx.Metrics().ReportConnUp()
 
 		case <-this.chans.closedChan:
 			this.connsCount--
+			this.actorCtx.Metrics().ReportConnDn()
 
 		case <-metricsTicker.C:
 			//this.actorCtx.Log().Debug("ConnsCount: %d", this.connsCount)

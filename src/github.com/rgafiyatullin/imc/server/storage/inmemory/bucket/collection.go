@@ -25,6 +25,8 @@ type KV interface {
 	Set(key string, value data.Value, validThru int64)
 
 	Del(key string)
+
+	Size() int
 }
 
 type KVEntry interface {
@@ -35,6 +37,7 @@ type KVEntry interface {
 type TTL interface {
 	SetTTL(k string, deadline int64)
 	FetchTimedOut(now int64) (string, bool)
+	Size() int
 }
 
 // KVEntry implementation
@@ -71,6 +74,10 @@ func NewKV() KV {
 	return kv
 }
 
+func (this *kv) Size() int {
+	return len(this.storage)
+}
+
 func (this *kv) Get(k string) (KVEntry, bool) {
 	kve, found := this.storage[k]
 	return kve, found
@@ -102,6 +109,10 @@ func NewTTL() TTL {
 	ttl.entries = list.New()
 	ttl.keys = make(map[string]bool)
 	return ttl
+}
+
+func (this *ttl) Size() int {
+	return this.entries.Len()
 }
 
 func (this *ttl) SetTTL(k string, deadline int64) {

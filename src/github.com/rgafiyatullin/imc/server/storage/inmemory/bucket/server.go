@@ -97,6 +97,7 @@ func (this *state) loop() {
 		case tick := <-this.tickChan:
 			this.storage.tickIdx = tick.CurrentTickIdx()
 			this.storage.PurgeTimedOut()
+			this.storage.ReportStats()
 
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)

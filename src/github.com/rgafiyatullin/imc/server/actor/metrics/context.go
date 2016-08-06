@@ -5,6 +5,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/rgafiyatullin/imc/server/actor/logging"
 	"github.com/rgafiyatullin/imc/server/config"
+	"runtime"
 	"time"
 )
 
@@ -29,14 +30,33 @@ type Ctx interface {
 	ReportCommandAuthDuration(d time.Duration)
 	ReportCommandAuthSuccess()
 	ReportCommandAuthFailure()
+	ReportConnUp()
+	ReportConnDn()
 	ReportConnCount(c int)
+	ReportStorageCleanupRecordsCount(c int)
+	ReportStorageCleanupDuration(d time.Duration)
+	ReportStorageTTLSize(c int)
+	ReportStorageKVSize(c int)
 }
 
 type ctx struct {
 	log    logging.Ctx
 	config config.Config
 
+	go_runtime_numcpu_g       metrics.Gauge
+	go_runtime_maxprocs_g     metrics.Gauge
+	go_runtime_numgoroutine_g metrics.Gauge
+
+	storage_cleanup_count_m    metrics.Meter
+	storage_cleanup_count_h    metrics.Histogram
+	storage_cleanup_duration_h metrics.Histogram
+
+	storage_bucket_ttl_size_h metrics.Histogram
+	storage_bucket_kv_size_h  metrics.Histogram
+
 	conn_count_g metrics.Gauge
+	conn_up_m    metrics.Meter
+	conn_dn_m    metrics.Meter
 
 	command_duration_h metrics.Histogram
 	command_rate_m     metrics.Meter
@@ -193,6 +213,38 @@ func (this *ctx) ReportConnCount(c int) {
 	this.conn_count_g.Update(int64(c))
 }
 
+func (this *ctx) ReportConnUp() {
+	this.conn_up_m.Mark(1)
+}
+func (this *ctx) ReportConnDn() {
+	this.conn_dn_m.Mark(1)
+}
+
+func (this *ctx) ReportStorageCleanupRecordsCount(c int) {
+	this.storage_cleanup_count_h.Update(int64(c))
+	this.storage_cleanup_count_m.Mark(int64(c))
+}
+func (this *ctx) ReportStorageCleanupDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.storage_cleanup_duration_h.Update(int64(us))
+}
+
+func (this *ctx) ReportStorageTTLSize(c int) {
+	this.storage_bucket_ttl_size_h.Update(int64(c))
+}
+func (this *ctx) ReportStorageKVSize(c int) {
+	this.storage_bucket_kv_size_h.Update(int64(c))
+}
+
+func reportRuntimeMetrics(cpus metrics.Gauge, maxprocs metrics.Gauge, goroutines metrics.Gauge) {
+	for {
+		cpus.Update(int64(runtime.NumCPU()))
+		maxprocs.Update(int64(runtime.GOMAXPROCS(0)))
+		goroutines.Update(int64(runtime.NumGoroutine()))
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log = log
 	this.config = config
@@ -200,81 +252,95 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 	this.log.Info("init")
 
 	sampleSize := 1028
-	alpha := 0.015
+	sampleAlpha := 0.15
+	sample := metrics.NewExpDecaySample(sampleSize, sampleAlpha)
+
+	this.go_runtime_numcpu_g = metrics.NewGauge()
+	this.go_runtime_maxprocs_g = metrics.NewGauge()
+	this.go_runtime_numgoroutine_g = metrics.NewGauge()
+	go reportRuntimeMetrics(
+		this.go_runtime_numcpu_g, this.go_runtime_maxprocs_g, this.go_runtime_numgoroutine_g)
+
+	this.storage_bucket_kv_size_h = metrics.NewHistogram(
+		metrics.NewUniformSample(int(this.config.Storage().RingSize())))
+	this.storage_bucket_ttl_size_h = metrics.NewHistogram(
+		metrics.NewUniformSample(int(this.config.Storage().RingSize())))
+
+	this.storage_cleanup_duration_h = metrics.NewHistogram(sample)
+	this.storage_cleanup_count_h = metrics.NewHistogram(sample)
+	this.storage_cleanup_count_m = metrics.NewMeter()
 
 	this.conn_count_g = metrics.NewGauge()
+	this.conn_up_m = metrics.NewMeter()
+	this.conn_dn_m = metrics.NewMeter()
 
-	this.command_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_duration_h = metrics.NewHistogram(sample)
 	this.command_rate_m = metrics.NewMeter()
 
-	this.command_get_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_get_duration_h = metrics.NewHistogram(sample)
 	this.command_get_rate_m = metrics.NewMeter()
 
-	this.command_set_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_set_duration_h = metrics.NewHistogram(sample)
 	this.command_set_rate_m = metrics.NewMeter()
 
-	this.command_del_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_del_duration_h = metrics.NewHistogram(sample)
 	this.command_del_rate_m = metrics.NewMeter()
 
-	this.command_lpshf_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_lpshf_duration_h = metrics.NewHistogram(sample)
 	this.command_lpshf_rate_m = metrics.NewMeter()
 
-	this.command_lpshb_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_lpshb_duration_h = metrics.NewHistogram(sample)
 	this.command_lpshb_rate_m = metrics.NewMeter()
 
-	this.command_lpopf_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_lpopf_duration_h = metrics.NewHistogram(sample)
 	this.command_lpopf_rate_m = metrics.NewMeter()
 
-	this.command_lpopb_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_lpopb_duration_h = metrics.NewHistogram(sample)
 	this.command_lpopb_rate_m = metrics.NewMeter()
 
-	this.command_lgetnth_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_lgetnth_duration_h = metrics.NewHistogram(sample)
 	this.command_lgetnth_rate_m = metrics.NewMeter()
 
-	this.command_expire_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_expire_duration_h = metrics.NewHistogram(sample)
 	this.command_expire_rate_m = metrics.NewMeter()
 
-	this.command_ttl_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_ttl_duration_h = metrics.NewHistogram(sample)
 	this.command_ttl_rate_m = metrics.NewMeter()
 
-	this.command_hset_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_hset_duration_h = metrics.NewHistogram(sample)
 	this.command_hset_rate_m = metrics.NewMeter()
 
-	this.command_hget_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_hget_duration_h = metrics.NewHistogram(sample)
 	this.command_hget_rate_m = metrics.NewMeter()
 
-	this.command_hdel_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_hdel_duration_h = metrics.NewHistogram(sample)
 	this.command_hdel_rate_m = metrics.NewMeter()
 
-	this.command_hkeys_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_hkeys_duration_h = metrics.NewHistogram(sample)
 	this.command_hkeys_rate_m = metrics.NewMeter()
 
-	this.command_hgetall_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_hgetall_duration_h = metrics.NewHistogram(sample)
 	this.command_hgetall_rate_m = metrics.NewMeter()
 
-	this.command_auth_duration_h = metrics.NewHistogram(
-		metrics.NewExpDecaySample(sampleSize, alpha))
+	this.command_auth_duration_h = metrics.NewHistogram(sample)
 	this.command_auth_rate_m = metrics.NewMeter()
 	this.command_auth_success_m = metrics.NewMeter()
 	this.command_auth_failure_m = metrics.NewMeter()
 
-	metrics.DefaultRegistry.Register("netsrv.conn_count.g", this.conn_count_g)
+	metrics.DefaultRegistry.Register("go.runtime.numcpu.g", this.go_runtime_numcpu_g)
+	metrics.DefaultRegistry.Register("go.runtime.maxprocs.g", this.go_runtime_maxprocs_g)
+	metrics.DefaultRegistry.Register("go.runtime.numgoroutine.g", this.go_runtime_numgoroutine_g)
+
+	metrics.DefaultRegistry.Register("storage.cleanup.duration.h", this.storage_cleanup_duration_h)
+	metrics.DefaultRegistry.Register("storage.cleanup.records_count.h", this.storage_cleanup_count_h)
+	metrics.DefaultRegistry.Register("storage.cleanup.records_count.m", this.storage_cleanup_count_m)
+
+	metrics.DefaultRegistry.Register("storage.bucket.kv.size.h", this.storage_bucket_kv_size_h)
+	metrics.DefaultRegistry.Register("storage.bucket.ttl.size.h", this.storage_bucket_ttl_size_h)
+
+	metrics.DefaultRegistry.Register("netsrv.conn.count.g", this.conn_count_g)
+	metrics.DefaultRegistry.Register("netsrv.conn.up.rate.m", this.conn_up_m)
+	metrics.DefaultRegistry.Register("netsrv.conn.dn.rate.m", this.conn_dn_m)
 
 	metrics.DefaultRegistry.Register("netsrv.command.duration.h", this.command_duration_h)
 	metrics.DefaultRegistry.Register("netsrv.command.rate.m", this.command_rate_m)
