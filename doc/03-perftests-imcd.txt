@@ -1,0 +1,38 @@
+
+rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,set
+====== SET ======
+  1000000 requests completed in 12.19 seconds
+  50 parallel clients
+  1024 bytes payload
+  keep alive: 1
+
+95.30% <= 1 milliseconds
+99.54% <= 2 milliseconds
+99.96% <= 3 milliseconds
+99.98% <= 4 milliseconds
+99.98% <= 5 milliseconds
+99.99% <= 6 milliseconds
+99.99% <= 7 milliseconds
+99.99% <= 12 milliseconds
+100.00% <= 39 milliseconds
+100.00% <= 40 milliseconds
+100.00% <= 40 milliseconds
+82068.12 requests per second
+
+====== GET ======
+  1000000 requests completed in 15.18 seconds
+  50 parallel clients
+  1024 bytes payload
+  keep alive: 1
+
+97.91% <= 1 milliseconds
+99.67% <= 2 milliseconds
+99.98% <= 3 milliseconds
+99.99% <= 4 milliseconds
+99.99% <= 5 milliseconds
+100.00% <= 6 milliseconds
+100.00% <= 7 milliseconds
+100.00% <= 7 milliseconds
+65889.17 requests per second
+
+
