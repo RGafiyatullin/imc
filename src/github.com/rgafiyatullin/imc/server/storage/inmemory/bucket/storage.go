@@ -128,13 +128,17 @@ func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.RESPValue, 
 
 func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.RESPValue, error) {
 	kve, existed := this.kv.Get(cmd.key)
-	this.kv.Del(cmd.key)
-	this.ttl.SetTTL(cmd.key, int64(ValidThruInfinity))
 
 	affectedRecords := int64(0)
-	validThru := kve.ValidThru()
-	if validThru == ValidThruInfinity || existed && validThru >= this.tickIdx {
-		affectedRecords = 1
+
+	if existed {
+		this.kv.Del(cmd.key)
+		this.ttl.SetTTL(cmd.key, int64(ValidThruInfinity))
+
+		validThru := kve.ValidThru()
+		if validThru == ValidThruInfinity || existed && validThru >= this.tickIdx {
+			affectedRecords = 1
+		}
 	}
 
 	return respvalues.NewInt(affectedRecords), nil
