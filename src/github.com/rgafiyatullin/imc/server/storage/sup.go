@@ -9,9 +9,14 @@ import (
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/ringmgr"
 )
 
+// Storage "supervisor" actor handle
 type Sup interface {
 	Join() join.Awaitable
+
+	// returns the Metronome handle started under this Storage supervisor actor.
 	QueryMetronome() metronome.Metronome
+
+	// returns the RingMgr handle started under this Storage supervisor actor.
 	QueryRingMgr() ringmgr.RingMgr
 }
 

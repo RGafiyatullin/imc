@@ -18,7 +18,7 @@ func (this *DelHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandDelDuration(elapsed)
 }
 
-func (this *DelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *DelHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
@@ -34,12 +34,12 @@ func (this *DelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 
 	for i := 1; i < len(reqElements); i++ {
 		// XXX
-		key := reqElements[i].(*respvalues.BasicBulkStr)
+		key := reqElements[i].(*respvalues.RESPBulkStr)
 		keyHash := ringmgr.CalcKeyHash(key)
 		bucketIdx := keyHash % uint32(len(buckets))
 		bucketApi := buckets[bucketIdx]
 		keyResult := bucketApi.RunCmd(bucket.NewCmdDel(key.String()))
-		affectedRecords = affectedRecords.Plus(keyResult.(*respvalues.BasicInt))
+		affectedRecords = affectedRecords.Plus(keyResult.(*respvalues.RESPInt))
 	}
 
 	return affectedRecords

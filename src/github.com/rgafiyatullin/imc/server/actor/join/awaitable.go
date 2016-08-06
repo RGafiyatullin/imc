@@ -1,6 +1,8 @@
 package join
 
+// The Future to wait for (see Joinable)
 type Awaitable interface {
+	// Blocks the caller until signaled by the awaited party
 	Await()
 }
 

@@ -5,27 +5,28 @@ import (
 	"net/textproto"
 )
 
-func NewBulkStr(v []byte) *BasicBulkStr {
-	s := new(BasicBulkStr)
+func NewBulkStr(v []byte) *RESPBulkStr {
+	s := new(RESPBulkStr)
 	s.bytes = v
 	return s
 }
 
-type BasicBulkStr struct {
+// Represents RESP-BulkString value (http://redis.io/topics/protocol#resp-bulk-strings)
+type RESPBulkStr struct {
 	bytes []byte
 }
 
-func (this *BasicBulkStr) Bytes() []byte {
+func (this *RESPBulkStr) Bytes() []byte {
 	return this.bytes
 }
-func (this *BasicBulkStr) String() string {
+func (this *RESPBulkStr) String() string {
 	return fmt.Sprintf("%s", this.bytes)
 }
 
-func (this *BasicBulkStr) ToString() string {
+func (this *RESPBulkStr) ToString() string {
 	return fmt.Sprintf("B(\"%s\")", this.bytes)
 }
-func (this *BasicBulkStr) Write(to *textproto.Conn) {
+func (this *RESPBulkStr) Write(to *textproto.Conn) {
 	to.Cmd("$%d", len(this.bytes))
 	to.W.Write(this.bytes)
 	to.Cmd("")

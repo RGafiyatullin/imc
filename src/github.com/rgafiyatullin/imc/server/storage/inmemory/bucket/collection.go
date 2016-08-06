@@ -1,3 +1,5 @@
+package bucket
+
 // The two collections defined here (KV and TTL) provide a simple interface for the Key-Value storage with per-key TTL (msec-wise).
 //
 // KV associates a given key with the value along with the some deadline.
@@ -7,14 +9,14 @@
 //
 // The collections are not meant to be thread-safe: they are supposed to be accessed sequentially.
 // In order to scale out -- use multiple collections as shards over the keyspace.
-package bucket
+
 
 import (
 	"container/list"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 )
 
-const ValidThruInfinity = -1
+const ValidThruInfinity = -1 // A special value signalling infinite TTL
 
 type KV interface {
 	// Returns nillable KVEntry if there is one associated with the given key

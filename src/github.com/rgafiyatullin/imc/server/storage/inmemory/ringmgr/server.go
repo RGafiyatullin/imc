@@ -12,8 +12,12 @@ import (
 	"hash/crc32"
 )
 
+// RingMgr actor handle
 type RingMgr interface {
+	// See Joinable
 	Join() join.Awaitable
+
+	// Returns the current buckets
 	QueryBuckets() []bucket.Bucket
 }
 
@@ -37,6 +41,7 @@ func (this *ringmgr) QueryBuckets() []bucket.Bucket {
 	return <-ch
 }
 
+// Starts a new RingMgr actor according to the configuration provided
 func StartRingMgr(ctx actor.Ctx, config config.Config, metronome metronome.Metronome) RingMgr {
 	chans := new(inChans)
 	chans.join = join.NewServerChan()
@@ -49,7 +54,8 @@ func StartRingMgr(ctx actor.Ctx, config config.Config, metronome metronome.Metro
 	return m
 }
 
-func CalcKeyHash(key *respvalues.BasicBulkStr) uint32 {
+// Calculates the hash value for the specified key (used to chose between the Buckets; see RingMgr.QueryBuckets())
+func CalcKeyHash(key *respvalues.RESPBulkStr) uint32 {
 	return crc32.ChecksumIEEE(key.Bytes())
 }
 

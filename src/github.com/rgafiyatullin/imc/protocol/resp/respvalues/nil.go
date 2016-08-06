@@ -4,16 +4,17 @@ import (
 	"net/textproto"
 )
 
-func NewNil() *BasicNil {
-	n := new(BasicNil)
+func NewNil() *RESPNil {
+	n := new(RESPNil)
 	return n
 }
 
-type BasicNil struct{}
+// See http://redis.io/topics/protocol#resp-bulk-strings (Null Bulk String)
+type RESPNil struct{}
 
-func (this *BasicNil) ToString() string {
+func (this *RESPNil) ToString() string {
 	return "NIL"
 }
-func (this *BasicNil) Write(to *textproto.Conn) {
+func (this *RESPNil) Write(to *textproto.Conn) {
 	to.Cmd("$-1")
 }

@@ -11,9 +11,13 @@ import (
 	"strconv"
 )
 
+// RESP-protocol context (over a net.Conn)
 type Context interface {
-	NextCommand() (*respvalues.BasicArr, error)
-	Write(data respvalues.BasicType)
+	// Create new protocol context from socket
+	Read() (*respvalues.RESPArray, error)
+
+	// Read next protocol command (blocking)
+	Write(data respvalues.RESPValue)
 }
 type context struct {
 	sock net.Conn
@@ -27,13 +31,13 @@ func New(sock net.Conn) Context {
 	return ctx
 }
 
-func (this *context) NextCommand() (*respvalues.BasicArr, error) {
+func (this *context) Read() (*respvalues.RESPArray, error) {
 	line, err := this.text.ReadLine()
 	if err != nil {
 		return nil, err
 	}
 	if len(line) == 0 {
-		return this.NextCommand()
+		return this.Read()
 	}
 	switch line[0] {
 	case constants.PrefixArray:
@@ -51,11 +55,12 @@ func (this *context) NextCommand() (*respvalues.BasicArr, error) {
 	}
 }
 
-func (this *context) Write(data respvalues.BasicType) {
+// Write protocol command
+func (this *context) Write(data respvalues.RESPValue) {
 	data.Write(this.text)
 }
 
-func (this *context) processArray(count64 int64) (*respvalues.BasicArr, error) {
+func (this *context) processArray(count64 int64) (*respvalues.RESPArray, error) {
 	count := int(count64)
 	elements := list.New()
 	for i := 0; i < count; i++ {
@@ -69,7 +74,7 @@ func (this *context) processArray(count64 int64) (*respvalues.BasicArr, error) {
 	return respvalues.NewArray(elements), nil
 }
 
-func (this *context) processCommandElement() (respvalues.BasicType, error) {
+func (this *context) processCommandElement() (respvalues.RESPValue, error) {
 	line, err := this.text.ReadLine()
 	if err != nil {
 		return nil, err

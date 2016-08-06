@@ -5,9 +5,15 @@ import (
 	"time"
 )
 
+// Logging context.
+// Proxies the logging requests additionally injecting current actor info into the log message.
 type Ctx interface {
+	// Creates another context with different actor-name
 	CloneWithName(name string) Ctx
+	// Blocks until the previously (in terms of the current execution context) emitted log-messages are actually logged.
+	// May be useful in case of logging fatal messages prior to requesting system halt.
 	Flush()
+	
 	Debug(fmtStr string, args ...interface{})
 	Info(fmtStr string, args ...interface{})
 	Warning(fmtStr string, args ...interface{})

@@ -7,11 +7,19 @@ import (
 	"os"
 )
 
+// Actor context.
+//
+// Includes the usual goodies necessary for normal actor operation: name, logger, metrics.
 type Ctx interface {
+	// current actor's name in the system hierarchy
 	Path() string
+	// logging context
 	Log() logging.Ctx
+	// metrics context
 	Metrics() metrics.Ctx
+	// creates a new actor context (for child actors)
 	NewChild(name string) Ctx
+	// enquire system halt
 	Halt(code int, message string)
 }
 

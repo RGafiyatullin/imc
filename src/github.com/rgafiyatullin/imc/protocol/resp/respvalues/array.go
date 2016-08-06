@@ -5,27 +5,28 @@ import (
 	"net/textproto"
 )
 
-func NewArray(el *list.List) *BasicArr {
-	a := new(BasicArr)
-	ea := make([]BasicType, el.Len())
+func NewArray(el *list.List) *RESPArray {
+	a := new(RESPArray)
+	ea := make([]RESPValue, el.Len())
 	i := 0
 	for e := el.Front(); e != nil; e = e.Next() {
-		ea[i] = e.Value.(BasicType)
+		ea[i] = e.Value.(RESPValue)
 		i++
 	}
 	a.elements = ea
 	return a
 }
 
-type BasicArr struct {
-	elements []BasicType
+// Represents RESP-array value (http://redis.io/topics/protocol#resp-arrays)
+type RESPArray struct {
+	elements []RESPValue
 }
 
-func (this *BasicArr) Elements() []BasicType {
+func (this *RESPArray) Elements() []RESPValue {
 	return this.elements
 }
 
-func (this *BasicArr) ToString() string {
+func (this *RESPArray) ToString() string {
 	acc := "A("
 	for i := 0; i < len(this.elements); i++ {
 		acc += this.elements[i].ToString() + ", "
@@ -34,7 +35,7 @@ func (this *BasicArr) ToString() string {
 	return acc
 }
 
-func (this *BasicArr) Write(to *textproto.Conn) {
+func (this *RESPArray) Write(to *textproto.Conn) {
 	to.Cmd("*%d", len(this.elements))
 	for i := 0; i < len(this.elements); i++ {
 		this.elements[i].Write(to)

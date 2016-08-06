@@ -16,6 +16,7 @@ type listenerChannels struct {
 	joinChan     chan chan<- bool
 }
 
+// Handle for Listener-actor
 type Listener interface {
 	Join() join.Awaitable
 }
@@ -47,6 +48,11 @@ type srvState struct {
 	joiners        *list.List
 }
 
+// Start a new Listener actor.
+//
+// Listener actor binds the interface according to the provided config and serves the Redis protocol on it.
+//
+// All the requests are passed to the provided RingMgr.
 func StartListener(ctx actor.Ctx, config config.Config, ringMgr ringmgr.RingMgr) (Listener, error) {
 	lSock, listenErr := net.Listen("tcp", config.Net().BindSpec())
 	if listenErr != nil {

@@ -15,7 +15,7 @@ func NewList() *ListValue {
 	return l
 }
 
-func (this *ListValue) ToRESP() respvalues.BasicType {
+func (this *ListValue) ToRESP() respvalues.RESPValue {
 	elements := list.New()
 	for elt := this.elements.Front(); elt != nil; elt = elt.Next() {
 		val := elt.Value.(*ScalarValue).value

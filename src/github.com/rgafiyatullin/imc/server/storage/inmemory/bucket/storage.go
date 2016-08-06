@@ -26,7 +26,7 @@ func NewStorage(actorCtx actor.Ctx) *storage {
 	return s
 }
 
-func (this *storage) handleCommand(cmd Cmd) (respvalues.BasicType, error) {
+func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 	switch cmd.CmdId() {
 	case cmdGet:
 		return this.handleCommandGet(cmd.(*CmdGet))
@@ -77,7 +77,7 @@ func (this *storage) PurgeTimedOut() {
 	}
 }
 
-func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error) {
+func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 	if !found {
 		return respvalues.NewNil(), nil
@@ -93,18 +93,18 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 	return kve.value().ToRESP(), nil
 }
 
-func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.BasicType, error) {
+func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.RESPValue, error) {
 	this.kv.Set(cmd.key, data.NewScalar(cmd.value), ValidThruInfinity)
 	this.ttl.SetTTL(cmd.key, ValidThruInfinity)
 
 	return respvalues.NewStr("OK"), nil
 }
 
-func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.BasicType, error) {
+func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.RESPValue, error) {
 	return nil, errors.New("EXISTS: Not implemented")
 }
 
-func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error) {
+func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.RESPValue, error) {
 	kve, existed := this.kv.Get(cmd.key)
 	this.kv.Del(cmd.key)
 	this.ttl.SetTTL(cmd.key, int64(ValidThruInfinity))
@@ -118,15 +118,15 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error)
 	return respvalues.NewInt(affectedRecords), nil
 }
 
-func (this *storage) handleCommandLPushBack(cmd *CmdLPushBack) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPushBack(cmd *CmdLPushBack) (respvalues.RESPValue, error) {
 	return this.handleCommandLPushCommon(cmd.key, cmd.value, false)
 }
 
-func (this *storage) handleCommandLPushFront(cmd *CmdLPushFront) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPushFront(cmd *CmdLPushFront) (respvalues.RESPValue, error) {
 	return this.handleCommandLPushCommon(cmd.key, cmd.value, true)
 }
 
-func (this *storage) handleCommandLPushCommon(key string, value []byte, front bool) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPushCommon(key string, value []byte, front bool) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(key)
 	if found {
 		switch kve.value().(type) {
@@ -157,15 +157,15 @@ func (this *storage) handleCommandLPushCommon(key string, value []byte, front bo
 	}
 }
 
-func (this *storage) handleCommandLPopBack(cmd *CmdLPopBack) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPopBack(cmd *CmdLPopBack) (respvalues.RESPValue, error) {
 	return this.handleCommandLPopCommon(cmd.key, false)
 }
 
-func (this *storage) handleCommandLPopFront(cmd *CmdLPopFront) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPopFront(cmd *CmdLPopFront) (respvalues.RESPValue, error) {
 	return this.handleCommandLPopCommon(cmd.key, false)
 }
 
-func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(key)
 	if !found {
 		return respvalues.NewNil(), nil
@@ -191,7 +191,7 @@ func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues
 	}
 }
 
-func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType, error) {
+func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 	if !found {
 		return respvalues.NewNil(), nil
@@ -212,7 +212,7 @@ func (this *storage) handleCommandLGetNth(cmd *CmdLGetNth) (respvalues.BasicType
 	}
 }
 
-func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.BasicType, error) {
+func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -236,7 +236,7 @@ func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.BasicType, error)
 	}
 }
 
-func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, error) {
+func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -255,7 +255,7 @@ func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, 
 	return respvalues.NewInt(1), nil
 }
 
-func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.BasicType, error) {
+func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -279,7 +279,7 @@ func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.BasicType, erro
 	}
 }
 
-func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, error) {
+func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -301,7 +301,7 @@ func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, erro
 	}
 }
 
-func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.BasicType, error) {
+func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -328,7 +328,7 @@ func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.BasicType, erro
 	}
 }
 
-func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.BasicType, error) {
+func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {
@@ -351,7 +351,7 @@ func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.BasicType, er
 	}
 }
 
-func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.BasicType, error) {
+func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 
 	if !found {

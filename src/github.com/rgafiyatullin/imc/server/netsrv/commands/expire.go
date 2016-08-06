@@ -19,12 +19,12 @@ func (this *ExpireHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandExpireDuration(elapsed)
 }
 
-func (this *ExpireHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *ExpireHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
 	reqElements := req.Elements()
-	cmd := reqElements[0].(*respvalues.BasicBulkStr).String()
+	cmd := reqElements[0].(*respvalues.RESPBulkStr).String()
 
 	if len(reqElements) != 3 && (cmd == "EXPIRE" || cmd == "PEXPIRE") {
 		return respvalues.NewErr("EXPIRE/PEXPIRE: malformed command")
@@ -36,12 +36,12 @@ func (this *ExpireHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType
 	buckets := this.ringMgr.QueryBuckets()
 
 	// XXX
-	key := reqElements[1].(*respvalues.BasicBulkStr)
+	key := reqElements[1].(*respvalues.RESPBulkStr)
 
 	expiryMSec := int64(0)
 
 	if cmd == "EXPIRE" || cmd == "PEXPIRE" {
-		expiryStr := reqElements[2].(*respvalues.BasicBulkStr).String()
+		expiryStr := reqElements[2].(*respvalues.RESPBulkStr).String()
 		expiryParsed, expiryParseError := strconv.ParseInt(expiryStr, 10, 32)
 		expiryMSec = expiryParsed
 

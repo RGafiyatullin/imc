@@ -75,7 +75,7 @@ func (this *connectionState) loop() {
 	defer this.onClosed()
 
 	for {
-		cmd, err := this.protocol.NextCommand()
+		cmd, err := this.protocol.Read()
 
 		cmdExecStart := time.Now()
 		if err != nil {
@@ -88,17 +88,17 @@ func (this *connectionState) loop() {
 	}
 }
 
-func (this *connectionState) processRequest(req *respvalues.BasicArr) {
+func (this *connectionState) processRequest(req *respvalues.RESPArray) {
 	elements := req.Elements()
 
-	var resp respvalues.BasicType = nil
+	var resp respvalues.RESPValue = nil
 
 	if len(elements) == 0 {
 		resp = respvalues.NewErr("Malformed command (0 parts)")
 	} else {
 		switch elements[0].(type) {
-		case *respvalues.BasicBulkStr:
-			cmdName := elements[0].(*respvalues.BasicBulkStr).String()
+		case *respvalues.RESPBulkStr:
+			cmdName := elements[0].(*respvalues.RESPBulkStr).String()
 
 			handler, ok := this.handlers[cmdName]
 			if ok {

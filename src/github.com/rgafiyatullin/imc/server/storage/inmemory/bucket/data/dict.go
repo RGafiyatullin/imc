@@ -6,7 +6,7 @@ type DictValue struct {
 	elements map[string]*ScalarValue
 }
 
-func (this *DictValue) ToRESP() respvalues.BasicType {
+func (this *DictValue) ToRESP() respvalues.RESPValue {
 	return respvalues.NewErr("Cannot represent the whole Dict in terms of RESP")
 }
 

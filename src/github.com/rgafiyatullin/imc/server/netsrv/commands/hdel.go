@@ -18,7 +18,7 @@ func (this *HDelHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandHDelDuration(elapsed)
 }
 
-func (this *HDelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *HDelHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
@@ -31,8 +31,8 @@ func (this *HDelHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 	buckets := this.ringMgr.QueryBuckets()
 
 	// XXX
-	key := reqElements[1].(*respvalues.BasicBulkStr)
-	hkey := reqElements[2].(*respvalues.BasicBulkStr)
+	key := reqElements[1].(*respvalues.RESPBulkStr)
+	hkey := reqElements[2].(*respvalues.RESPBulkStr)
 
 	keyHash := ringmgr.CalcKeyHash(key)
 	bucketIdx := keyHash % uint32(len(buckets))

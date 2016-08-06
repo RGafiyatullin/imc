@@ -9,7 +9,7 @@ type PingHandler struct {
 	ctx actor.Ctx
 }
 
-func (this *PingHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *PingHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	return respvalues.NewStr("PONG")
 }
 

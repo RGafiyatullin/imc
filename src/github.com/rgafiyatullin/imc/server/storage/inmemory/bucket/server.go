@@ -13,15 +13,15 @@ import (
 
 type Bucket interface {
 	Join() join.Awaitable
-	RunCmd(cmd Cmd) respvalues.BasicType
+	RunCmd(cmd Cmd) respvalues.RESPValue
 }
 
 type bucket struct {
 	chans *inChans
 }
 
-func (this *bucket) RunCmd(cmd Cmd) respvalues.BasicType {
-	ch := make(chan respvalues.BasicType, 1)
+func (this *bucket) RunCmd(cmd Cmd) respvalues.RESPValue {
+	ch := make(chan respvalues.RESPValue, 1)
 	req := new(cmdReq)
 	req.cmd = cmd
 	req.replyTo = ch
@@ -36,15 +36,15 @@ func (this *bucket) Join() join.Awaitable {
 }
 
 type CmdReq interface {
-	ReplyTo() chan<- respvalues.BasicType
+	ReplyTo() chan<- respvalues.RESPValue
 	Cmd() Cmd
 }
 type cmdReq struct {
-	replyTo chan respvalues.BasicType
+	replyTo chan respvalues.RESPValue
 	cmd     Cmd
 }
 
-func (this *cmdReq) ReplyTo() chan<- respvalues.BasicType { return this.replyTo }
+func (this *cmdReq) ReplyTo() chan<- respvalues.RESPValue { return this.replyTo }
 func (this *cmdReq) Cmd() Cmd                             { return this.cmd }
 
 type inChans struct {

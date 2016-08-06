@@ -18,7 +18,7 @@ func (this *LPshFHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandLPshFDuration(elapsed)
 }
 
-func (this *LPshFHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *LPshFHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
@@ -31,9 +31,9 @@ func (this *LPshFHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType 
 	buckets := this.ringMgr.QueryBuckets()
 
 	// XXX
-	key := reqElements[1].(*respvalues.BasicBulkStr)
+	key := reqElements[1].(*respvalues.RESPBulkStr)
 	// XXX
-	value := reqElements[2].(*respvalues.BasicBulkStr)
+	value := reqElements[2].(*respvalues.RESPBulkStr)
 
 	keyHash := ringmgr.CalcKeyHash(key)
 	bucketIdx := keyHash % uint32(len(buckets))

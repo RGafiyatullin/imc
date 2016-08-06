@@ -13,6 +13,6 @@ func NewScalar(value []byte) *ScalarValue {
 	return v
 }
 
-func (this *ScalarValue) ToRESP() respvalues.BasicType {
+func (this *ScalarValue) ToRESP() respvalues.RESPValue {
 	return respvalues.NewBulkStr(this.value)
 }

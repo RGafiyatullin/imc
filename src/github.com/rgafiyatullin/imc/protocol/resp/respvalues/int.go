@@ -5,22 +5,23 @@ import (
 	"net/textproto"
 )
 
-func NewInt(v int64) *BasicInt {
-	i := new(BasicInt)
+func NewInt(v int64) *RESPInt {
+	i := new(RESPInt)
 	i.i = v
 	return i
 }
 
-type BasicInt struct {
+// Represents RESP-Int value (http://redis.io/topics/protocol#resp-integers)
+type RESPInt struct {
 	i int64
 }
 
-func (this *BasicInt) ToString() string {
+func (this *RESPInt) ToString() string {
 	return fmt.Sprintf("\"I(%d)\"", this.i)
 }
-func (this *BasicInt) Write(to *textproto.Conn) {
+func (this *RESPInt) Write(to *textproto.Conn) {
 	to.Cmd(":%d", this.i)
 }
-func (this *BasicInt) Plus(other *BasicInt) *BasicInt {
+func (this *RESPInt) Plus(other *RESPInt) *RESPInt {
 	return NewInt(this.i + other.i)
 }

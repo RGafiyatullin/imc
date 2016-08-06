@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// A context to report metrics via
 type Ctx interface {
 	ReportCommandDuration(d time.Duration)
 	ReportCommandGetDuration(d time.Duration)

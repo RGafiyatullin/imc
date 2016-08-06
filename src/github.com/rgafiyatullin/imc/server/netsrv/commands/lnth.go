@@ -19,7 +19,7 @@ func (this *LNthHandler) reportTime(start time.Time) {
 	this.ctx.Metrics().ReportCommandLGetNthDuration(elapsed)
 }
 
-func (this *LNthHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
+func (this *LNthHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue {
 	startTime := time.Now()
 	defer this.reportTime(startTime)
 
@@ -31,9 +31,9 @@ func (this *LNthHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType {
 
 	buckets := this.ringMgr.QueryBuckets()
 	// XXX
-	key := reqElements[1].(*respvalues.BasicBulkStr)
+	key := reqElements[1].(*respvalues.RESPBulkStr)
 	// XXX
-	idx, idxParseErr := strconv.ParseInt(reqElements[2].(*respvalues.BasicBulkStr).String(), 10, 32)
+	idx, idxParseErr := strconv.ParseInt(reqElements[2].(*respvalues.RESPBulkStr).String(), 10, 32)
 	if idxParseErr != nil {
 		return respvalues.NewErr("LNTH: invalid idx specified")
 	}

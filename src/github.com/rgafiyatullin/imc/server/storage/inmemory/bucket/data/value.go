@@ -5,5 +5,5 @@ import (
 )
 
 type Value interface {
-	ToRESP() respvalues.BasicType
+	ToRESP() respvalues.RESPValue
 }
