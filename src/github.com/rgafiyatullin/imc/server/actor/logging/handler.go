@@ -7,6 +7,8 @@ import (
 
 const ChanBufSize = 64
 
+type LogRequest interface {}
+
 type LogReport struct {
 	at     time.Time
 	level  int
@@ -15,19 +17,32 @@ type LogReport struct {
 	entity string
 }
 
+type FlushMsg struct {
+	ackTo chan<-bool
+}
+
 type Handler interface {
 	Report(report *LogReport)
+	Flush()
 }
 type handler struct {
-	ch chan<- *LogReport
+	ch chan<- LogRequest
 }
 
 func (this *handler) Report(report *LogReport) {
 	this.ch <- report
 }
 
+func (this *handler) Flush() {
+	ch := make(chan bool, 1)
+	req := new(FlushMsg)
+	req.ackTo = ch
+	this.ch <- req
+	<- ch
+}
+
 func NewHandler() Handler {
-	ch := make(chan *LogReport, ChanBufSize)
+	ch := make(chan LogRequest, ChanBufSize)
 	h := new(handler)
 	h.ch = ch
 
@@ -37,7 +52,7 @@ func NewHandler() Handler {
 }
 
 type logHandlerState struct {
-	reports <-chan *LogReport
+	reports <-chan LogRequest
 }
 
 func (this *logHandlerState) init() {
@@ -45,8 +60,15 @@ func (this *logHandlerState) init() {
 }
 func (this *logHandlerState) loop() {
 	for {
-		report := <-this.reports
-		this.processReport(report)
+		request := <-this.reports
+		switch request.(type) {
+		case (*LogReport):
+			this.processReport(request.(*LogReport))
+		case (*FlushMsg):
+			this.processFlush()
+			request.(*FlushMsg).ackTo <- true
+		}
+
 	}
 }
 func (this *logHandlerState) processReport(report *LogReport) {
@@ -59,7 +81,11 @@ func (this *logHandlerState) processReport(report *LogReport) {
 	fmt.Printf(fmtStr, args...)
 }
 
-func hanlerEnterLoop(reports chan *LogReport) {
+func (this *logHandlerState) processFlush() {
+
+}
+
+func hanlerEnterLoop(reports chan LogRequest) {
 	state := new(logHandlerState)
 	state.reports = reports
 	state.init()

@@ -6,10 +6,15 @@ import (
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/netsrv"
 	"github.com/rgafiyatullin/imc/server/storage"
+	"container/list"
+	"github.com/rgafiyatullin/imc/server/actor/join"
 )
 
 func main() {
 	fmt.Println("Helloes! I'm the IMC daemon")
+
+	awaitList := list.New()
+	defer awaitBeforeExit(awaitList)
 
 	config := config.New()
 
@@ -17,12 +22,17 @@ func main() {
 	topActorCtx.Log().Info("starting up")
 
 	storageSup := storage.StartSup(topActorCtx.NewChild("storage_sup"), config)
+	awaitList.PushBack(storageSup.Join())
+
 	ringmgr := storageSup.QueryRingMgr()
-	listener, _ := netsrv.StartListener(topActorCtx.NewChild("listener"), config, ringmgr)
+	listener, listenErr := netsrv.StartListener(topActorCtx.NewChild("listener"), config, ringmgr)
+	if listenErr == nil {
+		awaitList.PushBack(listener.Join())
+	}
+}
 
-	joinStorage := storageSup.Join()
-	joinListener := listener.Join()
-
-	joinStorage.Await()
-	joinListener.Await()
+func awaitBeforeExit(awaitList *list.List) {
+	for elt := awaitList.Front(); elt != nil; elt = elt.Next() {
+		elt.Value.(join.Awaitable).Await()
+	}
 }

@@ -7,10 +7,12 @@ import (
 
 type Ctx interface {
 	CloneWithName(name string) Ctx
+	Flush()
 	Debug(fmtStr string, args ...interface{})
 	Info(fmtStr string, args ...interface{})
 	Warning(fmtStr string, args ...interface{})
 	Error(fmtStr string, args ...interface{})
+	Fatal(fmtStr string, args ...interface{})
 }
 
 type ctx struct {
@@ -55,6 +57,16 @@ func (this *ctx) Warning(fmtStr string, args ...interface{}) {
 
 func (this *ctx) Error(fmtStr string, args ...interface{}) {
 	this.message(lvlError, fmtStr, args)
+}
+
+func (this *ctx) Fatal(fmtStr string, args ...interface{}) {
+	this.message(lvlFatal, fmtStr, args)
+	this.Flush()
+}
+
+
+func (this *ctx) Flush() {
+	this.handler_.Flush()
 }
 
 func New(config config.Config) Ctx {
