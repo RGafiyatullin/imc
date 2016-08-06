@@ -63,6 +63,12 @@ func (this *connectionState) initCommands() {
 	commands.NewLNthHandler(this.actorCtx.NewChild("#LNTH"), this.ringMgr).Register(this.handlers)
 	commands.NewExpireHandler(this.actorCtx.NewChild("#EXPIRE"), this.ringMgr).Register(this.handlers)
 	commands.NewTTLHandler(this.actorCtx.NewChild("#TTL"), this.ringMgr).Register(this.handlers)
+	commands.NewHSetHandler(this.actorCtx.NewChild("#HSET"), this.ringMgr).Register(this.handlers)
+	commands.NewHGetHandler(this.actorCtx.NewChild("#HGET"), this.ringMgr).Register(this.handlers)
+	commands.NewHDelHandler(this.actorCtx.NewChild("#HDEL"), this.ringMgr).Register(this.handlers)
+	commands.NewHKeysHandler(this.actorCtx.NewChild("#HKEYS"), this.ringMgr).Register(this.handlers)
+	commands.NewHGetAllHandler(this.actorCtx.NewChild("#HGETALL"), this.ringMgr).Register(this.handlers)
+
 }
 
 func (this *connectionState) loop() {

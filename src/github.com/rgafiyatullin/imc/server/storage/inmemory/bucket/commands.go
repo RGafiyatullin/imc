@@ -14,6 +14,12 @@ const cmdLGetNth = 9
 const cmdExpire = 10
 const cmdTTL = 11
 
+const cmdHSet = 12
+const cmdHGet = 13
+const cmdHDel = 14
+const cmdHKeys = 15
+const cmdHGetAll = 16
+
 type Cmd interface {
 	CmdId() int
 }
@@ -81,6 +87,40 @@ func NewCmdTTL(key string, useSeconds bool) Cmd {
 	cmd := new(CmdTTL)
 	cmd.key = key
 	cmd.useSeconds = useSeconds
+	return cmd
+}
+
+func NewCmdHGetAll(key string) Cmd {
+	cmd := new(CmdHGetAll)
+	cmd.key = key
+	return cmd
+}
+
+func NewCmdHKeys(key string) Cmd {
+	cmd := new(CmdHKeys)
+	cmd.key = key
+	return cmd
+}
+
+func NewCmdHDel(key string, hkey string) Cmd {
+	cmd := new(CmdHDel)
+	cmd.key = key
+	cmd.hkey = hkey
+	return cmd
+}
+
+func NewCmdHGet(key string, hkey string) Cmd {
+	cmd := new(CmdHGet)
+	cmd.key = key
+	cmd.hkey = hkey
+	return cmd
+}
+
+func NewCmdHSet(key string, hkey string, hvalue []byte) Cmd {
+	cmd := new(CmdHSet)
+	cmd.key = key
+	cmd.hkey = hkey
+	cmd.hvalue = hvalue
 	return cmd
 }
 
@@ -176,4 +216,48 @@ type CmdTTL struct {
 
 func (this *CmdTTL) CmdId() int {
 	return cmdTTL
+}
+
+type CmdHSet struct {
+	key    string
+	hkey   string
+	hvalue []byte
+}
+
+func (this *CmdHSet) CmdId() int {
+	return cmdHSet
+}
+
+type CmdHGet struct {
+	key  string
+	hkey string
+}
+
+func (this *CmdHGet) CmdId() int {
+	return cmdHGet
+}
+
+type CmdHDel struct {
+	key  string
+	hkey string
+}
+
+func (this *CmdHDel) CmdId() int {
+	return cmdHDel
+}
+
+type CmdHKeys struct {
+	key string
+}
+
+func (this *CmdHKeys) CmdId() int {
+	return cmdHKeys
+}
+
+type CmdHGetAll struct {
+	key string
+}
+
+func (this *CmdHGetAll) CmdId() int {
+	return cmdHGetAll
 }

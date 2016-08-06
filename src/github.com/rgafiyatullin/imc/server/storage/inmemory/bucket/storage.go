@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"errors"
+	"fmt"
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
@@ -48,8 +49,18 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.BasicType, error) {
 		return this.handleCommandExpire(cmd.(*CmdExpire))
 	case cmdTTL:
 		return this.handleCommandTTL(cmd.(*CmdTTL))
+	case cmdHSet:
+		return this.handleCommandHSet(cmd.(*CmdHSet))
+	case cmdHGet:
+		return this.handleCommandHGet(cmd.(*CmdHGet))
+	case cmdHDel:
+		return this.handleCommandHDel(cmd.(*CmdHDel))
+	case cmdHKeys:
+		return this.handleCommandHKeys(cmd.(*CmdHKeys))
+	case cmdHGetAll:
+		return this.handleCommandHGetAll(cmd.(*CmdHGetAll))
 	default:
-		return nil, errors.New("unsupported command")
+		return nil, errors.New(fmt.Sprintf("unsupported command: %v", cmd.CmdId()))
 	}
 }
 
@@ -241,4 +252,24 @@ func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, 
 	this.ttl.SetTTL(cmd.key, validThru)
 
 	return respvalues.NewInt(1), nil
+}
+
+func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.BasicType, error) {
+	return respvalues.NewErr("hset: not implemented [storage]"), nil
+}
+
+func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, error) {
+	return respvalues.NewErr("hget: not implemented [storage]"), nil
+}
+
+func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.BasicType, error) {
+	return respvalues.NewErr("hdel: not implemented [storage]"), nil
+}
+
+func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.BasicType, error) {
+	return respvalues.NewErr("hkeys: not implemented [storage]"), nil
+}
+
+func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.BasicType, error) {
+	return respvalues.NewErr("hgetall: not implemented [storage]"), nil
 }
