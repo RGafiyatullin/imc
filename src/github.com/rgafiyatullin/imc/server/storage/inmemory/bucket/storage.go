@@ -35,8 +35,6 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 		return this.handleCommandGet(cmd.(*CmdGet))
 	case cmdSet:
 		return this.handleCommandSet(cmd.(*CmdSet))
-	case cmdExists:
-		return this.handleCommandExists(cmd.(*CmdExists))
 	case cmdDel:
 		return this.handleCommandDel(cmd.(*CmdDel))
 	case cmdKeys:
@@ -51,6 +49,8 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 		return this.handleCommandLPopFront(cmd.(*CmdLPopFront))
 	case cmdLGetNth:
 		return this.handleCommandLGetNth(cmd.(*CmdLGetNth))
+	case cmdLLen:
+		return this.handleCommandLLen(cmd.(*CmdLLen))
 	case cmdExpire:
 		return this.handleCommandExpire(cmd.(*CmdExpire))
 	case cmdTTL:
@@ -122,10 +122,6 @@ func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.RESPValue, error)
 	return respvalues.NewStr("OK"), nil
 }
 
-func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.RESPValue, error) {
-	return nil, errors.New("EXISTS: Not implemented")
-}
-
 func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.RESPValue, error) {
 	kve, existed := this.kv.Get(cmd.key)
 
@@ -142,6 +138,22 @@ func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.RESPValue, error)
 	}
 
 	return respvalues.NewInt(affectedRecords), nil
+}
+
+func (this *storage) handleCommandLLen(cmd *CmdLLen) (respvalues.RESPValue, error) {
+	kve, found := this.kv.Get(cmd.key)
+
+	if found {
+		switch kve.Value().(type) {
+		case (*data.ListValue):
+			l := kve.Value().(*data.ListValue)
+			return respvalues.NewInt(int64(l.Len())), nil
+		default:
+			return respvalues.NewErr("LLEN: incompatible existing value for this operation"), nil
+		}
+	} else {
+		return respvalues.NewInt(0), nil
+	}
 }
 
 func (this *storage) handleCommandLPushBack(cmd *CmdLPushBack) (respvalues.RESPValue, error) {
@@ -177,7 +189,7 @@ func (this *storage) handleCommandLPushCommon(key string, value []byte, front bo
 		} else {
 			l.PushBack(value)
 		}
-		this.kv.Set(key, l, 0)
+		this.kv.Set(key, l, ValidThruInfinity)
 
 		return respvalues.NewInt(int64(1)), nil
 	}
@@ -430,4 +442,3 @@ func processKeys(pattern string, allKeys *gtreap.Treap, fut *respvalues.RESPFutu
 	}
 	fut.Chan() <- respvalues.NewArray(resultList)
 }
-

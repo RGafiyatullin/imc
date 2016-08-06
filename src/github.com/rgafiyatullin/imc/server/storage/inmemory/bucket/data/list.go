@@ -50,6 +50,10 @@ func (this *ListValue) PopBack() (value []byte, empty bool) {
 	return value, empty
 }
 
+func (this *ListValue) Len() int {
+	return this.elements.Len()
+}
+
 func (this *ListValue) PushBack(value []byte) int {
 	wrapped := NewScalar(value)
 	this.elements.PushBack(wrapped)

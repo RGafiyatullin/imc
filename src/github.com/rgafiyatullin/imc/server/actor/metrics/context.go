@@ -21,6 +21,7 @@ type Ctx interface {
 	ReportCommandLPopFDuration(d time.Duration)
 	ReportCommandLPopBDuration(d time.Duration)
 	ReportCommandLGetNthDuration(d time.Duration)
+	ReportCommandLLenDuration(d time.Duration)
 	ReportCommandExpireDuration(d time.Duration)
 	ReportCommandTTLDuration(d time.Duration)
 	ReportCommandHSetDuration(d time.Duration)
@@ -81,6 +82,8 @@ type ctx struct {
 	command_lpopb_rate_m       metrics.Meter
 	command_lgetnth_duration_h metrics.Histogram
 	command_lgetnth_rate_m     metrics.Meter
+	command_llen_rate_m        metrics.Meter
+	command_llen_duration_h    metrics.Histogram
 
 	command_expire_duration_h metrics.Histogram
 	command_expire_rate_m     metrics.Meter
@@ -138,6 +141,12 @@ func (this *ctx) ReportCommandLGetNthDuration(d time.Duration) {
 	us := d.Nanoseconds() / 1000
 	this.command_lgetnth_rate_m.Mark(1)
 	this.command_lgetnth_duration_h.Update(us)
+}
+
+func (this *ctx) ReportCommandLLenDuration(d time.Duration) {
+	us := d.Nanoseconds() / 1000
+	this.command_llen_rate_m.Mark(1)
+	this.command_llen_duration_h.Update(us)
 }
 
 func (this *ctx) ReportCommandLPopBDuration(d time.Duration) {
@@ -312,6 +321,9 @@ func (this *ctx) init(log logging.Ctx, config config.Config) {
 
 	this.command_lgetnth_duration_h = metrics.NewHistogram(sample)
 	this.command_lgetnth_rate_m = metrics.NewMeter()
+
+	this.command_llen_duration_h = metrics.NewHistogram(sample)
+	this.command_llen_rate_m = metrics.NewMeter()
 
 	this.command_expire_duration_h = metrics.NewHistogram(sample)
 	this.command_expire_rate_m = metrics.NewMeter()

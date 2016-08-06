@@ -2,7 +2,6 @@ package bucket
 
 const cmdSet = 1
 const cmdGet = 2
-const cmdExists = 3
 const cmdDel = 4
 const cmdKeys = 17
 
@@ -10,6 +9,7 @@ const cmdLPushBack = 5
 const cmdLPushFront = 6
 const cmdLPopBack = 7
 const cmdLPopFront = 8
+const cmdLLen = 3
 const cmdLGetNth = 9
 
 const cmdExpire = 10
@@ -66,6 +66,12 @@ func NewCmdLGetNth(key string, idx int) Cmd {
 	cmd := new(CmdLGetNth)
 	cmd.key = key
 	cmd.idx = idx
+	return cmd
+}
+
+func NewCmdLLen(key string) Cmd {
+	cmd := new(CmdLLen)
+	cmd.key = key
 	return cmd
 }
 
@@ -148,14 +154,6 @@ func (this *CmdGet) CmdId() int {
 	return cmdGet
 }
 
-type CmdExists struct {
-	key string
-}
-
-func (this *CmdExists) CmdId() int {
-	return cmdExists
-}
-
 type CmdDel struct {
 	key string
 }
@@ -213,6 +211,14 @@ type CmdLGetNth struct {
 
 func (this *CmdLGetNth) CmdId() int {
 	return cmdLGetNth
+}
+
+type CmdLLen struct {
+	key string
+}
+
+func (this *CmdLLen) CmdId() int {
+	return cmdLLen
 }
 
 type CmdExpire struct {

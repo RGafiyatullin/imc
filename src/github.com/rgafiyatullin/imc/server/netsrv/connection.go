@@ -73,6 +73,7 @@ func (this *connectionState) InitCommandsFullSet() {
 	commands.NewLPopFHandler(this.actorCtx.NewChild("#LPOPF"), this.ringMgr).Register(this.handlers)
 	commands.NewLPopBHandler(this.actorCtx.NewChild("#LPOPB"), this.ringMgr).Register(this.handlers)
 	commands.NewLNthHandler(this.actorCtx.NewChild("#LNTH"), this.ringMgr).Register(this.handlers)
+	commands.NewLLenHandler(this.actorCtx.NewChild("#LLEN"), this.ringMgr).Register(this.handlers)
 	commands.NewExpireHandler(this.actorCtx.NewChild("#EXPIRE"), this.ringMgr).Register(this.handlers)
 	commands.NewTTLHandler(this.actorCtx.NewChild("#TTL"), this.ringMgr).Register(this.handlers)
 	commands.NewHSetHandler(this.actorCtx.NewChild("#HSET"), this.ringMgr).Register(this.handlers)
