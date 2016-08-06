@@ -49,13 +49,13 @@ func (this *ExpireHandler) Handle(req *respvalues.BasicArr) respvalues.BasicType
 			return respvalues.NewErr("EXPIRE/PEXPIRE/PERSIST: invalid expiry specified")
 		}
 		if expiryMSec < 0 {
-			expiryMSec = -1
+			expiryMSec = bucket.ValidThruInfinity
 		}
 		if cmd == "EXPIRE" {
 			expiryMSec *= 1000
 		}
 	} else if cmd == "PERSIST" {
-		expiryMSec = -1
+		expiryMSec = bucket.ValidThruInfinity
 	}
 
 	keyHash := ringmgr.CalcKeyHash(key)

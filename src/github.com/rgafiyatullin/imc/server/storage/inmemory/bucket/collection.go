@@ -14,6 +14,8 @@ import (
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 )
 
+const ValidThruInfinity = -1
+
 type KV interface {
 	// Returns nillable KVEntry if there is one associated with the given key
 	Get(key string) (KVEntry, bool)
@@ -104,14 +106,14 @@ func NewTTL() TTL {
 func (this *ttl) SetTTL(k string, deadline int64) {
 	_, found := this.keys[k]
 	if found {
-		if deadline == -1 {
+		if deadline == ValidThruInfinity {
 			this.keyRm(k)
 			delete(this.keys, k)
 		} else {
 			this.keyInsAndRm(k, deadline)
 		}
 	} else {
-		if deadline != -1 {
+		if deadline != ValidThruInfinity {
 			this.keyIns(k, deadline)
 			this.keys[k] = true
 		}

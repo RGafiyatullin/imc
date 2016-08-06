@@ -7,6 +7,7 @@ import (
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
+	"container/list"
 )
 
 type storage struct {
@@ -83,9 +84,9 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 	}
 
 	validThru := kve.validThru()
-	if validThru != -1 && validThru < this.tickIdx {
+	if validThru != ValidThruInfinity && validThru < this.tickIdx {
 		this.kv.Del(cmd.key)
-		this.ttl.SetTTL(cmd.key, -1)
+		this.ttl.SetTTL(cmd.key, ValidThruInfinity)
 		return respvalues.NewNil(), nil
 	}
 
@@ -93,8 +94,8 @@ func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.BasicType, error)
 }
 
 func (this *storage) handleCommandSet(cmd *CmdSet) (respvalues.BasicType, error) {
-	this.kv.Set(cmd.key, data.NewScalar(cmd.value), -1)
-	this.ttl.SetTTL(cmd.key, -1)
+	this.kv.Set(cmd.key, data.NewScalar(cmd.value), ValidThruInfinity)
+	this.ttl.SetTTL(cmd.key, ValidThruInfinity)
 
 	return respvalues.NewStr("OK"), nil
 }
@@ -106,11 +107,11 @@ func (this *storage) handleCommandExists(cmd *CmdExists) (respvalues.BasicType, 
 func (this *storage) handleCommandDel(cmd *CmdDel) (respvalues.BasicType, error) {
 	kve, existed := this.kv.Get(cmd.key)
 	this.kv.Del(cmd.key)
-	this.ttl.SetTTL(cmd.key, int64(-1))
+	this.ttl.SetTTL(cmd.key, int64(ValidThruInfinity))
 
 	affectedRecords := int64(0)
 	validThru := kve.validThru()
-	if validThru == -1 || existed && validThru >= this.tickIdx {
+	if validThru == ValidThruInfinity || existed && validThru >= this.tickIdx {
 		affectedRecords = 1
 	}
 
@@ -182,7 +183,7 @@ func (this *storage) handleCommandLPopCommon(key string, front bool) (respvalues
 		}
 		if isEmpty {
 			this.kv.Del(key)
-			this.ttl.SetTTL(key, -1)
+			this.ttl.SetTTL(key, ValidThruInfinity)
 		}
 		return respvalues.NewBulkStr(value), nil
 	default:
@@ -219,8 +220,8 @@ func (this *storage) handleCommandTTL(cmd *CmdTTL) (respvalues.BasicType, error)
 	}
 	validThru := kve.validThru()
 
-	if validThru == -1 {
-		return respvalues.NewInt(-1), nil
+	if validThru == ValidThruInfinity {
+		return respvalues.NewInt(ValidThruInfinity), nil
 	}
 
 	nanosLeft := (validThru - this.tickIdx) * metronome.TickDurationNanos
@@ -242,8 +243,8 @@ func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, 
 		return respvalues.NewInt(0), nil
 	}
 
-	validThru := int64(-1)
-	if cmd.expiry != -1 {
+	validThru := int64(ValidThruInfinity)
+	if cmd.expiry != ValidThruInfinity {
 		expiryTicks := cmd.expiry * 1000000 / metronome.TickDurationNanos
 		validThru = this.tickIdx + expiryTicks
 	}
@@ -255,21 +256,116 @@ func (this *storage) handleCommandExpire(cmd *CmdExpire) (respvalues.BasicType, 
 }
 
 func (this *storage) handleCommandHSet(cmd *CmdHSet) (respvalues.BasicType, error) {
-	return respvalues.NewErr("hset: not implemented [storage]"), nil
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found {
+		dict := data.NewDict()
+		dict.Set(cmd.hkey, cmd.hvalue)
+		this.kv.Set(cmd.key, dict, ValidThruInfinity)
+		return respvalues.NewInt(1), nil
+	}
+
+	switch kve.value().(type) {
+	case (*data.DictValue):
+		dict := kve.value().(*data.DictValue)
+		keyCreated := dict.Set(cmd.hkey, cmd.hvalue)
+		if keyCreated {
+			return respvalues.NewInt(1), nil
+		} else {
+			return respvalues.NewInt(0), nil
+		}
+	default:
+		return respvalues.NewErr("HSET: incompatible existing value for this operation"), nil
+	}
 }
 
 func (this *storage) handleCommandHGet(cmd *CmdHGet) (respvalues.BasicType, error) {
-	return respvalues.NewErr("hget: not implemented [storage]"), nil
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found { return respvalues.NewNil(), nil }
+
+	switch kve.value().(type) {
+	case (*data.DictValue):
+		dict := kve.value().(*data.DictValue)
+		hvalue, hfound := dict.Get(cmd.hkey)
+		if !hfound {
+			return respvalues.NewNil(), nil
+		} else {
+			return respvalues.NewBulkStr(hvalue), nil
+		}
+
+	default:
+		return respvalues.NewErr("HGET: incompatible existing value for this operation"), nil
+	}
 }
 
 func (this *storage) handleCommandHDel(cmd *CmdHDel) (respvalues.BasicType, error) {
-	return respvalues.NewErr("hdel: not implemented [storage]"), nil
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found { return respvalues.NewInt(0), nil }
+
+	switch kve.value().(type) {
+	case (*data.DictValue):
+		dict := kve.value().(*data.DictValue)
+		hexisted, hempty := dict.Del(cmd.hkey)
+
+		if hempty {
+			this.kv.Del(cmd.key)
+		}
+
+		if !hexisted {
+			return respvalues.NewInt(0), nil
+		} else {
+			return respvalues.NewInt(1), nil
+		}
+
+	default:
+		return respvalues.NewErr("HDEL: incompatible existing value for this operation"), nil
+	}
 }
 
 func (this *storage) handleCommandHKeys(cmd *CmdHKeys) (respvalues.BasicType, error) {
-	return respvalues.NewErr("hkeys: not implemented [storage]"), nil
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found {
+		return respvalues.NewNil(), nil
+	}
+
+	switch kve.value().(type) {
+	case (*data.DictValue):
+		dict := kve.value().(*data.DictValue)
+		hkeys := dict.Keys()
+		hkeysAsResp := list.New()
+		for i := 0; i < len(hkeys); i++ {
+			k := respvalues.NewStr(hkeys[i])
+			hkeysAsResp.PushBack(k)
+		}
+		return respvalues.NewArray(hkeysAsResp), nil
+
+	default:
+		return respvalues.NewErr("HKEYS: incompatible existing value for this operation"), nil
+	}
 }
 
 func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.BasicType, error) {
-	return respvalues.NewErr("hgetall: not implemented [storage]"), nil
+	kve, found := this.kv.Get(cmd.key)
+
+	if !found {
+		return respvalues.NewNil(), nil
+	}
+
+	switch kve.value().(type) {
+	case (*data.DictValue):
+		dict := kve.value().(*data.DictValue)
+		hvalues := dict.Values()
+		hvaluesAsResp := list.New()
+		for i := 0; i < len(hvalues); i++ {
+			v := respvalues.NewBulkStr(hvalues[i])
+			hvaluesAsResp.PushBack(v)
+		}
+		return respvalues.NewArray(hvaluesAsResp), nil
+
+	default:
+		return respvalues.NewErr("HGETALL: incompatible existing value for this operation"), nil
+	}
 }

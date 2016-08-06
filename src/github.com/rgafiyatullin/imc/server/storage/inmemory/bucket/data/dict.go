@@ -32,12 +32,13 @@ func (this *DictValue) Get(key string) (value []byte, keyfound bool) {
 	}
 }
 
-func (this *DictValue) Del(key string) (existed bool) {
+func (this *DictValue) Del(key string) (existed bool, empty bool) {
 	_, existed = this.elements[key]
 	if existed {
 		delete(this.elements, key)
 	}
-	return existed
+	empty = len(this.elements) == 0
+	return existed, empty
 }
 
 func (this *DictValue) Keys() []string {
