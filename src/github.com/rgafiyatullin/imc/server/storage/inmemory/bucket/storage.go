@@ -9,8 +9,8 @@ import (
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
 	"github.com/steveyen/gtreap"
-	"time"
 	"regexp"
+	"time"
 )
 
 type storage struct {
@@ -397,33 +397,33 @@ func (this *storage) handleCommandHGetAll(cmd *CmdHGetAll) (respvalues.RESPValue
 }
 
 func (this *storage) handleCommandKeys(cmd *CmdKeys) (respvalues.RESPValue, error) {
-	result := list.New()
+	allKeys := this.kv.Keys()
 
-	keys := this.kv.Keys()
+	fut := respvalues.NewFuture()
 
-	reErr := this.filterKeys(cmd.pattern, keys, result)
-	if reErr != nil {
-		return respvalues.NewErr(reErr.Error()), nil
-	} else {
-		return respvalues.NewArray(result), nil
-	}
+	go processKeys(cmd.pattern, allKeys, fut)
+
+	return fut, nil
 }
-func (this *storage) filterKeys(pattern string, allKeys *gtreap.Treap, resultKeys *list.List) error {
+
+func processKeys(pattern string, allKeys *gtreap.Treap, fut *respvalues.RESPFuture) {
 	firstKey := allKeys.Min()
-	//this.actorCtx.Log().Debug("filterKeys. Min: %v", firstKey)
+	resultList := list.New()
+
 	if firstKey != nil {
 		re, err := regexp.Compile(pattern)
-		if err != nil { return err }
-
+		if err != nil {
+			fut.Chan() <- respvalues.NewErr(err.Error())
+			return
+		}
 		allKeys.VisitAscend(firstKey, func(item gtreap.Item) bool {
-			//this.actorCtx.Log().Debug("filterKeys. Visiting %v", item.(string))
 			key := item.(string)
 			if re.Match([]byte(key)) {
-				resultKeys.PushBack(respvalues.NewStr(key))
+				resultList.PushBack(respvalues.NewStr(key))
 			}
 			return true
 		})
 	}
-	return nil
+	fut.Chan() <- respvalues.NewArray(resultList)
 }
 

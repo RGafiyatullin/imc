@@ -39,19 +39,29 @@ func (this *KeysHandler) Handle(req *respvalues.RESPArray) respvalues.RESPValue 
 		bucketApi := buckets[bucketIdx]
 		bucketResult := bucketApi.RunCmd(bucket.NewCmdKeys(pattern.String()))
 		switch bucketResult.(type) {
-		case *respvalues.RESPArray:
-			respArr := bucketResult.(*respvalues.RESPArray)
-			elements := respArr.Elements()
-			for i := 0; i < len(elements); i++ {
-				resultElements.PushBack(elements[i])
-			}
+		case *respvalues.RESPFuture:
+			respFut := bucketResult.(*respvalues.RESPFuture)
+			respPresent := respFut.Await()
+			switch respPresent.(type) {
+			case *respvalues.RESPArray:
+				respArr := respPresent.(*respvalues.RESPArray)
+				elements := respArr.Elements()
+				for i := 0; i < len(elements); i++ {
+					resultElements.PushBack(elements[i])
+				}
 
-		case *respvalues.RESPErr:
-			return bucketResult
+			case *respvalues.RESPErr:
+				return bucketResult
+
+			default:
+				this.ctx.Log().Warning(
+					"Unexpected response (inside Future) to CmdKeys from bucket[%d]: %+v", bucketIdx, bucketResult)
+				return respvalues.NewErr("Internal server error")
+			}
 
 		default:
 			this.ctx.Log().Warning(
-				"Unexpected response to CmdKeys from bucket[%d]: %+v", bucketIdx, bucketResult)
+				"Unexpected response (instead of Future) to CmdKeys from bucket[%d]: %+v", bucketIdx, bucketResult)
 			return respvalues.NewErr("Internal server error")
 		}
 	}
