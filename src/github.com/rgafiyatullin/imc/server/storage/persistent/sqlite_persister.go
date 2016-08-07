@@ -2,7 +2,7 @@ package persistent
 
 import (
 	"database/sql"
-	//_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 )
@@ -40,6 +40,10 @@ func StartSqlitePersister(actorCtx actor.Ctx, file string) Persister {
 const stRestoring = 0
 const stSaving = 1
 
+const ktString = 0
+const ktList = 1
+const ktMap = 2
+
 type state struct {
 	actorCtx actor.Ctx
 	chans    *channels
@@ -59,14 +63,45 @@ func (this *state) init(actorCtx actor.Ctx, chans *channels, file string) {
 }
 
 func (this *state) initSqlite() {
-	db, err := sql.Open("sqlite3", ":memory")
+	db, err := sql.Open("sqlite3", "file:"+this.file)
 	if err != nil {
 		this.actorCtx.Log().Fatal("Failed to open database [%s]: %v", this.file, err)
 		this.actorCtx.Log().Flush()
 		this.actorCtx.Halt(2, "SqlitePersister: Failed to open database")
 	} else {
 		this.db = db
+		this.ensureSqliteSchema()
 	}
+}
+
+func (this *state) ensureSqliteSchema() {
+	_, keysErr := this.db.Exec("CREATE TABLE keys (" +
+		"k varchar(1024) NOT NULL, " +
+		"v blob, " +
+		"t tinyint, " +
+		"e integer, " +
+		"PRIMARY KEY(k))")
+	this.actorCtx.Log().Debug("keysErr: %v", keysErr)
+
+	_, listIdErr := this.db.Exec("CREATE TABLE ids_seq (id integer NOT NULL, v tinyint, PRIMARY KEY(id))")
+
+	this.actorCtx.Log().Debug("listIdErr: %v", listIdErr)
+
+	_, listsErr := this.db.Exec("CREATE TABLE lists (" +
+		"id integer NOT NULL, " +
+		"list_id bigint NOT NULL, " +
+		"idx int NOT NULL, " +
+		"value blob NOT NULL," +
+		"PRIMARY KEY(id))")
+	this.actorCtx.Log().Debug("listsErr: %v", listsErr)
+
+	_, mapsErr := this.db.Exec("CREATE TABLE maps (" +
+		"id integer NOT NULL, " +
+		"map_id bigint NOT NULL, " +
+		"k varchar(1024), " +
+		"value BLOB, " +
+		"PRIMARY KEY(id))")
+	this.actorCtx.Log().Debug("mapsErr: %v", mapsErr)
 }
 
 func (this *state) loop() {

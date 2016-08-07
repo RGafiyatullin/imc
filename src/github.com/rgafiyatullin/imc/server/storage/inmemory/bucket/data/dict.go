@@ -51,6 +51,10 @@ func (this *DictValue) Del(key string) (existed bool, empty bool) {
 	return existed, empty
 }
 
+func (this *DictValue) Len() int {
+	return len(this.elements)
+}
+
 func (this *DictValue) Keys() []string {
 	size := len(this.elements)
 	keys := make([]string, size)
