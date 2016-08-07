@@ -103,7 +103,7 @@ func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *in
 		persisterFile := path.Join(
 			config.Storage().PersistenceDirectory(),
 			fmt.Sprintf("bucket-%d-%d.sqlite", totalBucketsCount, idx))
-		this.persister = persistent.StartSqlitePersister(this.ctx.NewChild("persister"), persisterFile)
+		this.persister = persistent.StartSqlitePersister(this.ctx.NewChild("sqlite_persister"), persisterFile)
 
 	} else {
 		this.persister = persistent.CreateNilPersister()

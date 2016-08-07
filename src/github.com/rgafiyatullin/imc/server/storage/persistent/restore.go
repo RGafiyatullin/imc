@@ -1,6 +1,6 @@
 package persistent
 
-type RestoreReq interface{}
+//type RestoreReq interface{}
 
 type RestoreMsg interface{}
 
