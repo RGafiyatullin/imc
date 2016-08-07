@@ -262,8 +262,20 @@ rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,s
 
 * "persistence to disk/db";
 
-* scaling(on server-side or on client-side, up to you).
+ Persistence can be done synchronously (when the bucket itself writes into the persistent storage). That may worsen latency significantly.
+ Or it can be done asynchronously (when the bucket just passes a message to the goroutine(s) which in its(their) turn write into the persistent storage).
+ The latter option seems more feasible yet it requires either deep-copying of all the key-value tuples passed to the persister or using immutable data structures.
+ I would prefer immutable data structures but the time is up, thus we have what we have.
 
+* "scaling(on server-side or on client-side, up to you)."
+
+ Not done. Since it's a *cache*, the data stored in it is not overly valuable. So we do not need to do any kind of replication. 
+ In this case there is no need for the communication between the nodes of `imcd` (per chance we decide we need such).
+ Therefore I would insist on relying on the client-side in scaling-out.
+
+* "automatic tests."
+
+ Out of time. Sorry. :(
 
 ## Conclusion
 
