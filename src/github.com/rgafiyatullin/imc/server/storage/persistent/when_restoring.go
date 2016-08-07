@@ -9,6 +9,8 @@ func (this *state) whenRestoring() {
 
 	this.status = stSaving
 	this.chans.restore <- NewRestoreComplete()
+	this.db.Close()
+	this.startWriter()
 }
 
 func (this *state) fetchAndRestoreValues() {
