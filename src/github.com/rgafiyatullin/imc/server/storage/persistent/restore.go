@@ -4,6 +4,7 @@ import "github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
 
 type RestoreMsg interface {
 	IsComplete() bool
+	GetKV() (string, data.Value)
 }
 
 func NewRestoreComplete() *RestoreComplete {
@@ -42,7 +43,13 @@ func (this *RestoreStringValue) IsComplete() bool { return false }
 func (this *RestoreListValue) IsComplete() bool { return false }
 func (this *RestoreDictValue) IsComplete() bool { return false }
 
+func (this *RestoreStringValue) GetKV() (string, data.Value) { return this.Key, this.Value }
+func (this *RestoreListValue) GetKV() (string, data.Value) { return this.Key, this.Value }
+func (this *RestoreDictValue) GetKV() (string, data.Value) { return this.Key, this.Value }
+
+
 type RestoreComplete struct{}
 
 func (this *RestoreComplete) IsComplete() bool { return true }
+func (this *RestoreComplete) GetKV() (string, data.Value) { return "", nil }
 

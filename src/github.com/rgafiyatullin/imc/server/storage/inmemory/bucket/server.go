@@ -147,8 +147,10 @@ func (this *state) handleRestoreMsg(restoreMsg persistent.RestoreMsg) {
 		case (*persistent.RestoreComplete):
 			this.ctx.Log().Info("restore complete: %+v", restoreMsg)
 			this.restoreInProgress = false
+
 		default:
-			this.ctx.Log().Info("restore: received %+v", restoreMsg)
+			k, v := restoreMsg.GetKV()
+			this.storage.Restore(k, v)
 		}
 
 	} else {

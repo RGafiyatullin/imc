@@ -99,6 +99,11 @@ func (this *storage) PurgeTimedOut() {
 	}
 }
 
+func (this *storage) Restore(k string, v data.Value) {
+	this.ttl.SetTTL(k, ValidThruInfinity)
+	this.kv.Set(k, v, ValidThruInfinity)
+}
+
 func (this *storage) handleCommandGet(cmd *CmdGet) (respvalues.RESPValue, error) {
 	kve, found := this.kv.Get(cmd.key)
 	if !found {
