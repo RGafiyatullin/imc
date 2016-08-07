@@ -1,9 +1,12 @@
 package persistent
 
-import "time"
+import (
+	"github.com/rgafiyatullin/imc/server/storage/persistent/writer"
+	"time"
+)
 
 func (this *state) startWriter() {
-	this.actorCtx.Log().Error("startWriter: NOT IMPLEMENTED")
+	this.writer = writer.StartWriter(this.actorCtx.NewChild("writer"), this.dsn)
 }
 
 func (this *state) whenSaving() {

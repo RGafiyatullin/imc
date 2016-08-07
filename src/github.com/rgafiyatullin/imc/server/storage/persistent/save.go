@@ -1,3 +1,5 @@
 package persistent
 
-type SaveReq interface{}
+type SaveMsg interface{}
+
+
