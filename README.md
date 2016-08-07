@@ -34,7 +34,7 @@ The solution has been called `imcd` (in-memory cache daemon).
 
 It's been decided to implement Redis-protocol for the following reasons:
 * no need to invent own text-protocol;
-* no need to write "Golang API client" as there is a fair amount of those (http://redis.io/clients#go: tested with Radix);
+* no need to write "Golang API client" as there is a fair amount of those (tested with [Radix](http://redis.io/clients#go));
 * no need to write a custom perf-test utility (redis-benchmark does the job).
 
 ### Data model
@@ -52,11 +52,11 @@ The keyspace is divided evenly between a ring of so called buckets. CRC32 is use
 
 All operations against any particular bucket are serialized (except for the KEYS operation).
 
-Each bucket has carries the following low-level data structures to store the keys, values and expiries:
+Each bucket carries the following low-level data structures to store the keys, values and expiries:
 
 * Go's native `map[string]KVEntry` -- associate keys with the values;
 * `list.List/*[TTLEntry]*/` -- ordered list of the keys having non-infinity expiry time;
-* `gtreap.Treap` -- a persistent (immutable) `set` used to satisfy quite a potentially long-lasting KEYS-operation without blocking the bucket.
+* `gtreap.Treap/*[string]*/` -- a persistent (immutable) `set` used to satisfy potentially quite a long-lasting KEYS-operation without blocking the bucket.
 
 ### Actor model
 
@@ -84,7 +84,7 @@ imcd
 
 ### Deployment
 
-The easiest way to deploy `imcd` is to use Docker: https://hub.docker.com/r/rgafiyatullin/imcd/ .
+The easiest way to deploy `imcd` is to use carefully brewed [Docker image](https://hub.docker.com/r/rgafiyatullin/imcd/) .
 
 Nevertheless in case of necessity the `imcd` can be launched directly without much fuss. 
 The following OS environment variables can be used to configure the service:
@@ -94,6 +94,10 @@ The following OS environment variables can be used to configure the service:
 * `IMCD_NET_BIND` - default `":6379"`
 * `IMCD_NET_ACCEPTORS_COUNT` - default `1`
 * `IMCD_PASSWORD` - default `""`
+
+###### Grafana dashboard
+For a dashboard like that ![](https://github.com/RGafiyatullin/imc/raw/master/doc/grafana-dashboard.png) , use the JSON file located [here](https://github.com/RGafiyatullin/imc/blob/master/doc/grafana-dashboard.json) (replace `imcd-2` with the one of your own).
+
 
 ### Build from source
 
@@ -188,7 +192,8 @@ redis 192.168.99.100:16379>
 
 A standard `redis-benchmark` utility has been used.
 
-#### `imcd`:
+#### `imcd` (using 4 CPUs)
+
 ```
 rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,set
 ====== SET ======
@@ -227,7 +232,7 @@ rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,s
 65889.17 requests per second
 ```
 
-#### `redis`
+#### `redis` (using a single CPU)
 
 ```
 rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,set
@@ -258,6 +263,7 @@ rgmbp:rgafiyatullin rg [dev] $ redis-benchmark -c 50 -n 1000000 -d 1024 -t get,s
 * "persistence to disk/db";
 
 * scaling(on server-side or on client-side, up to you).
+
 
 ## Conclusion
 
