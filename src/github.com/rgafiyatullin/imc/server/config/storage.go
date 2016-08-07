@@ -11,15 +11,22 @@ const StorageRingSizeDefault = 32
 type StorageConfig interface {
 	ResetToDefaults()
 	RingSize() uint
+	PersistenceEnabled() bool
+	PersistenceDirectory() string
 }
 
 type storageConfig struct {
-	ringSize uint
+	ringSize             uint
+	persistenceDirectory string
 }
 
-func (this *storageConfig) RingSize() uint { return this.ringSize }
+func (this *storageConfig) RingSize() uint               { return this.ringSize }
+func (this *storageConfig) PersistenceEnabled() bool     { return this.persistenceDirectory != "" }
+func (this *storageConfig) PersistenceDirectory() string { return this.persistenceDirectory }
+
 func (this *storageConfig) ResetToDefaults() {
 	this.ringSize = StorageRingSizeDefault
+	this.persistenceDirectory = ""
 }
 
 func (this *storageConfig) ReadFromOSEnv() {
@@ -36,4 +43,5 @@ func (this *storageConfig) ReadFromOSEnv() {
 		}
 	}
 
+	this.persistenceDirectory = os.Getenv("IMCD_STORAGE_PERSISTENCE_DIR")
 }

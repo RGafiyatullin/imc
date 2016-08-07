@@ -3,7 +3,6 @@ package bucket
 import (
 	"container/list"
 	"errors"
-	"fmt"
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/bucket/data"
@@ -66,7 +65,8 @@ func (this *storage) handleCommand(cmd Cmd) (respvalues.RESPValue, error) {
 	case cmdHGetAll:
 		return this.handleCommandHGetAll(cmd.(*CmdHGetAll))
 	default:
-		return nil, errors.New(fmt.Sprintf("unsupported command: %v", cmd.CmdId()))
+		this.actorCtx.Log().Warning("Received unsupported command [cmd-id: %d]", cmd.CmdId())
+		return nil, errors.New("UNSUPPORTED_COMMAND")
 	}
 }
 

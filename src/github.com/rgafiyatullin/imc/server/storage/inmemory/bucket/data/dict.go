@@ -1,8 +1,8 @@
 package data
 
 import (
-	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"container/list"
+	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 )
 
 type DictValue struct {

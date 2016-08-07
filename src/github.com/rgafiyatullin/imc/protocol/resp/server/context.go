@@ -43,7 +43,7 @@ func (this *context) Read() (*respvalues.RESPArray, error) {
 	case constants.PrefixArray:
 		cnt, err := strconv.ParseInt(line[1:], 10, 64)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("expected array size, got '%v'", line[1:]))
+			return nil, errors.New(fmt.Sprintf("EXPECTED_ARRAY_SIZE[GOT:'%v']", line[1:]))
 		}
 		elements, err := this.processArray(cnt)
 		if err != nil {
@@ -51,7 +51,7 @@ func (this *context) Read() (*respvalues.RESPArray, error) {
 		}
 		return elements, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("expected array (*), got '%v'", line[0]))
+		return nil, errors.New(fmt.Sprintf("EXPECTED_ARRAY_MARKER[GOT:'%v']", line[0]))
 	}
 }
 
@@ -120,6 +120,6 @@ func (this *context) processCommandElement() (respvalues.RESPValue, error) {
 		}
 		return respvalues.NewBulkStr(bytesPeeked), nil
 	default:
-		return nil, errors.New(fmt.Sprintf("Unexpected type-prefix: '%v'", line[0]))
+		return nil, errors.New(fmt.Sprintf("UNEXPECTED_TYPE_PREFIX['%v']", line[0]))
 	}
 }

@@ -4,11 +4,14 @@ import (
 	"container/list"
 	"fmt"
 
+	"errors"
 	"github.com/rgafiyatullin/imc/protocol/resp/respvalues"
 	"github.com/rgafiyatullin/imc/server/actor"
 	"github.com/rgafiyatullin/imc/server/actor/join"
 	"github.com/rgafiyatullin/imc/server/config"
 	"github.com/rgafiyatullin/imc/server/storage/inmemory/metronome"
+	"github.com/rgafiyatullin/imc/server/storage/persistent"
+	"path"
 )
 
 type Bucket interface {
@@ -65,14 +68,21 @@ func StartBucket(ctx actor.Ctx, idx uint, config config.Config, metronome metron
 }
 
 type state struct {
-	ctx       actor.Ctx
-	idx       uint
-	config    config.Config
-	chans     *inChans
-	joiners   *list.List
-	storage   *storage
+	ctx    actor.Ctx
+	idx    uint
+	config config.Config
+
+	chans   *inChans
+	joiners *list.List
+
+	storage *storage
+
 	metronome metronome.Metronome
 	tickChan  <-chan metronome.Tick
+
+	persister         persistent.Persister
+	restoreInProgress bool
+	restoreChan       <-chan persistent.RestoreMsg
 }
 
 func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *inChans, m metronome.Metronome) {
@@ -88,6 +98,19 @@ func (this *state) init(ctx actor.Ctx, idx uint, config config.Config, chans *in
 	this.tickChan = tickChan
 	this.metronome.Subscribe(tickChan)
 
+	if config.Storage().PersistenceEnabled() {
+		totalBucketsCount := config.Storage().RingSize()
+		persisterFile := path.Join(
+			config.Storage().PersistenceDirectory(),
+			fmt.Sprintf("bucket-%d-%d.sqlite", totalBucketsCount, idx))
+		this.persister = persistent.StartSqlitePersister(this.ctx.NewChild("persister"), persisterFile)
+
+	} else {
+		this.persister = persistent.CreateNilPersister()
+	}
+	this.restoreInProgress = true
+	this.restoreChan = this.persister.Restore()
+
 	this.ctx.Log().Debug("init")
 }
 
@@ -101,8 +124,12 @@ func (this *state) loop() {
 
 		case join := <-this.chans.join:
 			this.joiners.PushBack(join)
+
+		case restoreMsg := <-this.restoreChan:
+			this.handleRestoreMsg(restoreMsg)
+
 		case cmdReq := <-this.chans.cmd:
-			result, err := this.storage.handleCommand(cmdReq.Cmd())
+			result, err := this.handleCommandRequest(cmdReq)
 			if err != nil {
 				response := respvalues.NewErr(fmt.Sprintf("%v", err))
 				cmdReq.ReplyTo() <- response
@@ -111,6 +138,29 @@ func (this *state) loop() {
 			}
 
 		}
+	}
+}
+
+func (this *state) handleRestoreMsg(restoreMsg persistent.RestoreMsg) {
+	if this.restoreInProgress {
+		switch restoreMsg.(type) {
+		case (*persistent.RestoreComplete):
+			this.ctx.Log().Info("restore complete: %+v", restoreMsg)
+			this.restoreInProgress = false
+		default:
+			this.ctx.Log().Info("restore: received %+v", restoreMsg)
+		}
+
+	} else {
+		this.ctx.Log().Warning("received unexpected RestoreMsg(%+v)", restoreMsg)
+	}
+}
+
+func (this *state) handleCommandRequest(cmdReq CmdReq) (respvalues.RESPValue, error) {
+	if this.restoreInProgress {
+		return nil, errors.New("RESTORE_IN_PROGRESS")
+	} else {
+		return this.storage.handleCommand(cmdReq.Cmd())
 	}
 }
 
